@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三和街透天 | 桃園區大樹林段物件簡報</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97e;
+    --gold-pale: #fdf6e3;
+    --ink: #1a1209;
+    --ink-soft: #3d2e14;
+    --cream: #faf7f0;
+    --grey: #8a7d6b;
+    --grey-light: #ece6da;
+    --red-accent: #b84040;
+    --green-accent: #2d7a4a;
+    --shadow: rgba(26,18,9,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--ink);
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 30%, #2d1f08 0%, #0d0901 100%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .hero-badge {
+    position: relative;
+    border: 1px solid rgba(201,168,76,0.4);
+    color: var(--gold);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    padding: 0.4em 1.2em;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+  }
+  .hero-addr {
+    position: relative;
+    color: var(--grey);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  .hero-title {
+    position: relative;
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(2.2rem, 9vw, 4.5rem);
+    font-weight: 900;
+    color: #fff;
+    text-align: center;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.5rem;
+  }
+  .hero-title span { color: var(--gold); }
+  .hero-sub {
+    position: relative;
+    color: var(--grey);
+    font-size: 0.85rem;
+    text-align: center;
+    margin-bottom: 3rem;
+    letter-spacing: 0.05em;
+  }
+
+  .price-card {
+    position: relative;
+    background: linear-gradient(135deg, #2a1e08, #1a1209);
+    border: 1px solid rgba(201,168,76,0.35);
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    text-align: center;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .price-label {
+    color: var(--grey);
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .price-main {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(2.8rem, 12vw, 4.5rem);
+    font-weight: 900;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .price-unit { font-size: 1.2rem; color: var(--gold-light); }
+  .price-divider {
+    border: none;
+    border-top: 1px solid rgba(201,168,76,0.2);
+    margin: 1.2rem 0;
+  }
+  .price-note {
+    color: var(--gold-light);
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .price-note strong { color: #fff; font-size: 1.1rem; }
+
+  /* ── SCROLL INDICATOR ── */
+  .scroll-hint {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--gold);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    animation: bounce 2s infinite;
+  }
+  .scroll-hint::after {
+    content: '▼';
+    font-size: 0.9rem;
+  }
+  @keyframes bounce {
+    0%,100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+    50% { opacity: 1; transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* ── SECTIONS ── */
+  section { padding: 3rem 1.25rem; }
+  .section-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.25em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .section-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+    margin-bottom: 1.5rem;
+  }
+  .section-title em { color: var(--gold); font-style: normal; }
+
+  /* ── SPEC GRID ── */
+  .spec-section { background: var(--ink); color: #fff; }
+  .spec-section .section-label { color: var(--gold); }
+  .spec-section .section-title { color: #fff; }
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: rgba(201,168,76,0.15);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+  .spec-item {
+    background: #1a1209;
+    padding: 1.2rem 1rem;
+    text-align: center;
+  }
+  .spec-item-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--grey);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+  }
+  .spec-item-val {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .spec-item-val small { font-size: 0.75rem; color: var(--grey); font-family: 'Noto Sans TC', sans-serif; }
+
+  /* ── FAMILY SECTION ── */
+  .family-section { background: var(--gold-pale); }
+  .family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+  }
+  .family-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 20px var(--shadow);
+    border-top: 3px solid var(--gold);
+  }
+  .family-icon { font-size: 2rem; margin-bottom: 0.4rem; }
+  .family-card h4 { font-size: 0.85rem; font-weight: 700; color: var(--ink); margin-bottom: 0.3rem; }
+  .family-card p { font-size: 0.75rem; color: var(--grey); line-height: 1.5; }
+  .family-card.full { grid-column: 1 / -1; }
+
+  /* ── HIGHLIGHT BANNER ── */
+  .highlight-banner {
+    background: linear-gradient(135deg, var(--gold), #a87a20);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem;
+    color: var(--ink);
+    margin-top: 1rem;
+  }
+  .highlight-banner h3 { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .highlight-banner p { font-size: 0.82rem; line-height: 1.7; }
+
+  /* ── MARKET SECTION ── */
+  .market-section { background: #fff; }
+  .chart-wrap {
+    background: var(--cream);
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px var(--shadow);
+    position: relative;
+  }
+  .chart-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.05em;
+  }
+  canvas { max-width: 100%; }
+
+  /* ── AGE SECTION ── */
+  .age-section { background: var(--cream); }
+  .age-timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .age-timeline::before {
+    content: '';
+    position: absolute; left: 0.5rem; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--gold), transparent);
+  }
+  .age-event {
+    position: relative;
+    margin-bottom: 1.4rem;
+  }
+  .age-event::before {
+    content: '';
+    position: absolute;
+    left: -1.65rem; top: 0.3rem;
+    width: 10px; height: 10px;
+    background: var(--gold);
+    border-radius: 50%;
+    border: 2px solid var(--cream);
+  }
+  .age-event-year {
+    font-size: 0.7rem;
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .age-event-text {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-top: 0.2rem;
+  }
+
+  /* ── VALUE METER ── */
+  .value-box {
+    background: var(--ink);
+    border-radius: 16px;
+    padding: 1.8rem 1.5rem;
+    color: #fff;
+    margin-bottom: 1.5rem;
+  }
+  .value-box h3 {
+    font-family: 'Noto Serif TC', serif;
+    color: var(--gold);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  .value-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.9rem;
+    gap: 1rem;
+  }
+  .value-row-label { font-size: 0.78rem; color: var(--grey); flex: 1; }
+  .value-bar-wrap { flex: 2; }
+  .value-bar-bg { background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; }
+  .value-bar-fill { height: 8px; border-radius: 4px; transition: width 1s ease; }
+  .value-row-num { font-size: 0.85rem; font-weight: 700; color: var(--gold-light); min-width: 4rem; text-align: right; }
+
+  /* ── COMPARISON TABLE ── */
+  .comp-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+  .comp-table th {
+    background: var(--ink);
+    color: var(--gold);
+    font-size: 0.72rem;
+    padding: 0.7rem 0.5rem;
+    text-align: center;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+  }
+  .comp-table td {
+    font-size: 0.8rem;
+    padding: 0.7rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--grey-light);
+  }
+  .comp-table tr.highlight-row td { background: rgba(201,168,76,0.12); font-weight: 700; color: var(--gold); }
+  .comp-table td:first-child { text-align: left; color: var(--grey); font-size: 0.75rem; }
+
+  /* ── CTA ── */
+  .cta-section {
+    background: var(--ink);
+    text-align: center;
+    padding: 4rem 1.5rem;
+  }
+  .cta-section .section-label { color: var(--gold); }
+  .cta-section h2 {
+    font-family: 'Noto Serif TC', serif;
+    color: #fff;
+    font-size: clamp(1.6rem, 6vw, 2.5rem);
+    font-weight: 900;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+  }
+  .cta-section h2 span { color: var(--gold); }
+  .cta-section p { color: var(--grey); font-size: 0.85rem; line-height: 1.7; margin-bottom: 2rem; }
+  .cta-price {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+  .cta-note { color: var(--grey); font-size: 0.78rem; margin-bottom: 2rem; }
+
+  /* ── STICKY PRICE BAR ── */
+  .sticky-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(26,18,9,0.97);
+    border-top: 1px solid rgba(201,168,76,0.3);
+    padding: 0.8rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .sticky-bar .s-addr { font-size: 0.72rem; color: var(--grey); line-height: 1.4; }
+  .sticky-bar .s-price { font-family: 'Noto Serif TC', serif; color: var(--gold); font-size: 1.4rem; font-weight: 900; }
+  .sticky-bar .s-unit { font-size: 0.68rem; color: var(--grey); }
+
+  /* ── DIVIDER ── */
+  .gold-divider {
+    width: 48px; height: 3px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+    margin-bottom: 1.5rem;
+    border-radius: 2px;
+  }
+
+  /* Responsive */
+  @media (max-width: 360px) {
+    .spec-grid { grid-template-columns: 1fr; }
+    .family-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-badge">桃園區大樹林段 · 住宅區 · 透天厝</div>
+  <div class="hero-addr">桃園市桃園區三和街74巷2弄4號</div>
+  <h1 class="hero-title">三和街<span>透天</span><br>傾心之作</h1>
+  <p class="hero-sub">一戶難得 · 七口之家的理想居所</p>
+  <div class="price-card">
+    <div class="price-label">委託開價</div>
+    <div class="price-main">1,350<span class="price-unit">萬</span></div>
+    <hr class="price-divider">
+    <div class="price-note">
+      依實價登錄同弄成交紀錄<br>
+      <strong>市場行情顯著低估</strong><br>
+      同弄4號 2014年已成交 930萬，今日行情早已翻升
+    </div>
+  </div>
+  <div class="scroll-hint">往下滑覽</div>
+</section>
+
+<!-- SPEC -->
+<section class="spec-section">
+  <div class="section-label">物件規格</div>
+  <h2 class="section-title">詳細資訊<em>一覽</em></h2>
+  <div class="spec-grid">
+    <div class="spec-item">
+      <div class="spec-item-label">建物型態</div>
+      <div class="spec-item-val">透天厝</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">樓層</div>
+      <div class="spec-item-val">2F <small>/ 總2層</small></div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">建物坪數</div>
+      <div class="spec-item-val">≈24.81<small>坪</small></div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">建築年份</div>
+      <div class="spec-item-val">1977<small>年</small></div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">現況屋齡</div>
+      <div class="spec-item-val">≈49<small>年</small></div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">使用分區</div>
+      <div class="spec-item-val">住宅區</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">純單價</div>
+      <div class="spec-item-val">≈54<small>萬/坪</small></div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-item-label">車位</div>
+      <div class="spec-item-val">無<small>（純住宅）</small></div>
+    </div>
+  </div>
+  <div class="highlight-banner" style="background: linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05)); border:1px solid rgba(201,168,76,0.3); border-radius:12px; padding:1.2rem 1.4rem; margin-top:0.5rem;">
+    <h3 style="color:var(--gold); font-family:'Noto Serif TC',serif; margin-bottom:0.5rem;">📍 地段優勢</h3>
+    <p style="color:var(--grey); font-size:0.82rem; line-height:1.7;">
+      大樹林段核心地帶・三和街巷弄寧靜宜居<br>
+      生活機能完備，近桃園車站商圈、市場、學區<br>
+      巷弄型態低密度居住，前後通風採光良好
+    </p>
+  </div>
+</section>
+
+<!-- FAMILY -->
+<section class="family-section">
+  <div class="section-label">家庭需求分析</div>
+  <h2 class="section-title">2大人・5小孩<br><em>一屋真正住得下</em></h2>
+  <div class="gold-divider"></div>
+  <div class="family-grid">
+    <div class="family-card">
+      <div class="family-icon">🏠</div>
+      <h4>獨棟透天</h4>
+      <p>無鄰居樓上下噪音，孩子跑跳嬉鬧不怕干擾</p>
+    </div>
+    <div class="family-card">
+      <div class="family-icon">🧒</div>
+      <h4>5個孩子的空間</h4>
+      <p>多房格局，每個孩子都有屬於自己的角落</p>
+    </div>
+    <div class="family-card">
+      <div class="family-icon">🌿</div>
+      <h4>前後私有空間</h4>
+      <p>透天特有庭院或騎樓空間，孩子戶外活動超方便</p>
+    </div>
+    <div class="family-card">
+      <div class="family-icon">🚗</div>
+      <h4>停車不煩惱</h4>
+      <p>巷弄環境，機車停放彈性，家庭用車可協調</p>
+    </div>
+    <div class="family-card full">
+      <div class="family-icon">🏫</div>
+      <h4>學區生活機能佳</h4>
+      <p>桃園區學校密度高，幼兒園、國小、國中就學方便，孩子上下學安心省時</p>
+    </div>
+  </div>
+  <div class="highlight-banner">
+    <h3>💡 為什麼透天更適合大家庭？</h3>
+    <p>
+      相較於公寓大樓，透天厝提供完整的垂直生活動線，大人與孩子各有空間。
+      沒有管委會限制，生活更自由彈性，想裝單槓、腳踏車架都沒問題。
+      1,350萬在桃園市區買到透天，市場上稀有中的稀有。
+    </p>
+  </div>
+</section>
+
+<!-- MARKET ANALYSIS -->
+<section class="market-section">
+  <div class="section-label">市場行情分析</div>
+  <h2 class="section-title">大樹林段<em>歷年成交數據</em></h2>
+  <div class="gold-divider"></div>
+  <p style="font-size:0.82rem; color:var(--grey); margin-bottom:1.5rem; line-height:1.6;">
+    以下圖表來源：實價登錄 大樹林段 透天・住宅區・都市土地 有效成交資料（2012–2026 共128筆）
+  </p>
+
+  <!-- Chart 1: 成交量+總價 趨勢 -->
+  <div class="chart-wrap">
+    <div class="chart-title">📈 歷年成交量（左軸）與均價（右軸）趨勢圖</div>
+    <canvas id="chart1" height="220"></canvas>
+  </div>
+
+  <!-- Chart 2: 成交量+總價 分佈 -->
+  <div class="chart-wrap">
+    <div class="chart-title">📊 歷年成交量（左軸）與均總價（右軸）分佈圖</div>
+    <canvas id="chart2" height="220"></canvas>
+  </div>
+
+  <!-- Chart 3: 成交量+單價 趨勢 -->
+  <div class="chart-wrap">
+    <div class="chart-title">📈 歷年成交量（左軸）與純單價（右軸）趨勢圖</div>
+    <canvas id="chart3" height="220"></canvas>
+  </div>
+
+  <!-- Chart 4: 成交量+單價 分佈 -->
+  <div class="chart-wrap">
+    <div class="chart-title">📊 歷年成交量（左軸）與純單價（右軸）分佈圖</div>
+    <canvas id="chart4" height="220"></canvas>
+  </div>
+
+  <!-- 總價分布散點 -->
+  <div class="chart-wrap">
+    <div class="chart-title">🔵 各年度總價分佈散點圖（含本物件標示）</div>
+    <canvas id="chart5" height="250"></canvas>
+  </div>
+</section>
+
+<!-- AGE ADVANTAGE -->
+<section class="age-section">
+  <div class="section-label">屋齡優勢解析</div>
+  <h2 class="section-title">屋齡49年<em>是限制還是機會？</em></h2>
+  <div class="gold-divider"></div>
+
+  <div class="age-timeline">
+    <div class="age-event">
+      <div class="age-event-year">1977 年 · 建成</div>
+      <div class="age-event-text">加強磚造結構，早期台灣透天建築品質紮實，結構厚重耐久</div>
+    </div>
+    <div class="age-event">
+      <div class="age-event-year">2013 年 · 同弄3號成交</div>
+      <div class="age-event-text">三和街74巷2弄3號成交 600萬（單價21.6萬/坪），顯示本弄已有交易紀錄</div>
+    </div>
+    <div class="age-event">
+      <div class="age-event-year">2014 年 · 本物件4號成交</div>
+      <div class="age-event-text">三和街74巷2弄4號（本物件）成交 930萬，當年單價37.5萬/坪</div>
+    </div>
+    <div class="age-event">
+      <div class="age-event-year">2025–2026 年 · 市場現況</div>
+      <div class="age-event-text">大樹林段純單價均值已達 47–54萬/坪，市場全面走揚</div>
+    </div>
+    <div class="age-event">
+      <div class="age-event-year">現在 · 1,350萬委售</div>
+      <div class="age-event-text">依市場單價估算，本物件合理市值應在 1,300–1,500萬之間，1,350萬屬合理甚至偏低</div>
+    </div>
+  </div>
+
+  <div class="value-box">
+    <h3>🏗️ 老屋的真實價值</h3>
+    <div class="value-row">
+      <div class="value-row-label">結構紮實度</div>
+      <div class="value-bar-wrap"><div class="value-bar-bg"><div class="value-bar-fill" style="width:88%; background:var(--gold);"></div></div></div>
+      <div class="value-row-num">★★★★☆</div>
+    </div>
+    <div class="value-row">
+      <div class="value-row-label">改建彈性</div>
+      <div class="value-bar-wrap"><div class="value-bar-bg"><div class="value-bar-fill" style="width:95%; background:var(--gold);"></div></div></div>
+      <div class="value-row-num">★★★★★</div>
+    </div>
+    <div class="value-row">
+      <div class="value-row-label">地坪價值潛力</div>
+      <div class="value-bar-wrap"><div class="value-bar-bg"><div class="value-bar-fill" style="width:90%; background:var(--gold);"></div></div></div>
+      <div class="value-row-num">★★★★★</div>
+    </div>
+    <div class="value-row">
+      <div class="value-row-label">生活機能</div>
+      <div class="value-bar-wrap"><div class="value-bar-bg"><div class="value-bar-fill" style="width:85%; background:var(--gold);"></div></div></div>
+      <div class="value-row-num">★★★★☆</div>
+    </div>
+    <p style="font-size:0.78rem; color:var(--grey); margin-top:1rem; line-height:1.6;">
+      49年透天「買的是土地+地段」。同地段近年屋齡50年以上成交案件，單價仍維持35–55萬/坪，證明屋齡不是折扣主因，地段才是。
+    </p>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section style="background:#fff; padding: 3rem 1.25rem;">
+  <div class="section-label">同弄比較</div>
+  <h2 class="section-title">三和街74巷2弄<em>成交歷史</em></h2>
+  <div class="gold-divider"></div>
+  <div style="overflow-x:auto;">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>門牌</th>
+          <th>成交年</th>
+          <th>總價(萬)</th>
+          <th>單價(萬/坪)</th>
+          <th>坪數</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2弄3號</td>
+          <td>2013</td>
+          <td>600</td>
+          <td>21.6</td>
+          <td>27.78</td>
+        </tr>
+        <tr class="highlight-row">
+          <td>2弄4號 ★</td>
+          <td>2014</td>
+          <td>930</td>
+          <td>37.5</td>
+          <td>24.81</td>
+        </tr>
+        <tr>
+          <td>2弄1號</td>
+          <td>2014</td>
+          <td>862</td>
+          <td>31.0</td>
+          <td>27.78</td>
+        </tr>
+        <tr>
+          <td>2弄10號</td>
+          <td>2016</td>
+          <td>1,550</td>
+          <td>28.6</td>
+          <td>54.14</td>
+        </tr>
+        <tr>
+          <td>2弄3號</td>
+          <td>2017</td>
+          <td>828</td>
+          <td>29.8</td>
+          <td>27.78</td>
+        </tr>
+        <tr style="background:rgba(201,168,76,0.08);">
+          <td style="color:var(--gold); font-weight:700;">2弄4號 ⬅現</td>
+          <td style="color:var(--gold); font-weight:700;">2026委售</td>
+          <td style="color:var(--gold); font-weight:700;">1,350</td>
+          <td style="color:var(--gold); font-weight:700;">≈54.4</td>
+          <td style="color:var(--gold); font-weight:700;">24.81</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:0.78rem; color:var(--grey); margin-top:0.8rem; line-height:1.6;">
+    ★ 本物件同地址2014年成交 930萬，12年後以 1,350萬委售，漲幅僅 45%，遠低於大樹林段同期均價漲幅 120%+。
+    <strong style="color:var(--red-accent);">顯示定價保守，買方具有極大議價空間與升值空間。</strong>
+  </p>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="section-label">立即把握</div>
+  <h2>桃園市區透天<br><span>千萬以內稀有</span></h2>
+  <p>大樹林段 2025–2026 年均單價已達 47–54萬/坪<br>本物件委售單價仍在合理區間，是目前市場難得低點</p>
+  <div class="cta-price">1,350萬</div>
+  <div class="cta-note">委託價格 · 歡迎誠意議價</div>
+  <div style="background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:12px; padding:1.2rem 1.4rem; text-align:left; margin-bottom:1.5rem;">
+    <p style="color:var(--grey); font-size:0.8rem; line-height:1.8;">
+      ✅ 透天獨棟，7口家庭住得開<br>
+      ✅ 住宅區・大樹林段核心<br>
+      ✅ 同弄有成交實績，地段保值<br>
+      ✅ 老屋改建潛力，土地留存價值高<br>
+      ✅ 無電梯問題，孩子活動空間大<br>
+      ✅ 實價登錄比較，定價誠意十足
+    </p>
+  </div>
+  <p style="color:var(--grey); font-size:0.75rem; line-height:1.6;">
+    資料來源：內政部實價登錄 · 大樹林段透天住宅區都市土地<br>
+    本簡報數據截至2026年4月，僅供參考用途
+  </p>
+</section>
+
+<!-- STICKY BAR -->
+<div class="sticky-bar">
+  <div>
+    <div class="s-addr">三和街74巷2弄4號 · 透天</div>
+    <div class="s-unit">大樹林段 住宅區</div>
+  </div>
+  <div class="s-price">1,350萬</div>
+</div>
+
+<script>
+// ── DATA ──
+const years = [2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
+const counts = [9,19,11,7,6,11,11,9,5,8,9,7,8,7,1];
+const avgPrice = [1188,903,1206,2379,1363,1140,914,1233,944,1576,1963,2030,1881,1789,1650];
+const avgUnit  = [21.6,25.7,26.3,28.5,35.6,33.3,34.3,28.9,29.0,37.5,45.5,34.8,43.9,47.5,53.7];
+
+// All individual price data points per year for scatter
+const allData = {
+  2012:[1740,2540,400,700,580,500,700,3200,336],
+  2013:[450,413,322,660,600,888,1150,660,3020,200,235,880,680,600,670,1830,1560,775,1572],
+  2014:[700,968,930,800,450,250,4980,800,930,1600,862],
+  2015:[1350,4980,3000,3250,295,2580,1200],
+  2016:[1100,2000,1550,1200,1135,1190],
+  2017:[1866,900,1180,1838,1220,1228,1128,828,1250,550,550],
+  2018:[800,967,800,1600,886,1100,960,1100,1040,600,200],
+  2019:[1100,1000,800,1680,1490,1200,1950,868,1005],
+  2020:[1020,431,888,1930,450],
+  2021:[800,3000,950,1780,1800,1320,1210,1750],
+  2022:[1000,1900,1900,1218,1008,6489,2059,1050,1040],
+  2023:[1100,2550,600,1388,5800,1474,1300],
+  2024:[4481,1698,2500,1186,1760,1320,900,1200],
+  2025:[3500,1530,1100,1900,960,1400,2130],
+  2026:[1650]
+};
+const allUnitData = {
+  2012:[24.6,42.1,15.7,25.5,18.2,16.9,20.1,20.8,10.5],
+  2013:[18.2,35.7,9.5,8.4,21.6,27.9,28.4,36.5,26.9,9.1,4.3,27.7,24.8,22.4,24.8,19.5,41.0,27.9,74.4],
+  2014:[26.4,25.7,21.4,10.9,30.4,16.2,28.2,32.1,37.5,29.9,31.0],
+  2015:[28.4,28.2,46.6,53.9,9.8,20.9,12.1],
+  2016:[35.6,30.8,28.6,27.0,30.6,60.7],
+  2017:[34.9,32.7,24.8,42.2,27.2,44.8,23.3,29.8,32.7,47.6,26.3],
+  2018:[34.8,31.0,24.0,27.0,31.4,85.6,35.5,32.8,17.4,31.9,26.1],
+  2019:[29.2,27.7,18.8,33.5,23.7,33.9,29.9,27.9,35.2],
+  2020:[32.7,15.8,28.3,51.8,16.5],
+  2021:[19.3,45.8,30.4,38.9,33.7,51.4,41.1,39.3],
+  2022:[28.5,65.4,65.4,35.8,35.0,97.8,26.7,27.0,27.5],
+  2023:[40.1,44.7,39.8,27.1,29.7,16.5,45.6],
+  2024:[62.8,54.5,49.1,32.1,41.2,42.3,32.8,36.0],
+  2025:[33.0,75.9,40.0,22.2,62.2,44.6,54.8],
+  2026:[53.7]
+};
+
+const GOLD = '#c9a84c';
+const GOLD2 = 'rgba(201,168,76,0.15)';
+const BLUE = '#4a9fcf';
+const BLUE2 = 'rgba(74,159,207,0.15)';
+const GREEN = '#2d7a4a';
+const RED = '#b84040';
+
+const commonOpts = {
+  responsive: true,
+  maintainAspectRatio: true,
+  interaction: { mode: 'index', intersect: false },
+  plugins: { legend: { position: 'bottom', labels: { font:{size:10}, color:'#3d2e14', boxWidth:12, padding:10 } } },
+};
+
+function makeAxis(label, color, position, beginZero=true) {
+  return {
+    type:'linear', position, beginAtZero: beginZero,
+    title: { display:true, text:label, color, font:{size:10}, padding:2 },
+    ticks: { color, font:{size:9} },
+    grid: { color:'rgba(0,0,0,0.05)' }
+  };
+}
+
+// Chart 1 – 成交量+均總價 趨勢 (line)
+new Chart(document.getElementById('chart1'), {
+  type:'line',
+  data:{
+    labels: years,
+    datasets:[
+      { label:'成交量（筆）', data:counts, borderColor:BLUE, backgroundColor:BLUE2, yAxisID:'y', tension:0.4, fill:true, pointRadius:3, borderWidth:2 },
+      { label:'均總價（萬）', data:avgPrice, borderColor:GOLD, backgroundColor:'transparent', yAxisID:'y2', tension:0.4, borderWidth:2.5, pointRadius:4, pointBackgroundColor:GOLD }
+    ]
+  },
+  options:{
+    ...commonOpts,
+    scales:{
+      x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
+      y: makeAxis('成交量（筆）',BLUE,'left'),
+      y2: makeAxis('均總價（萬）',GOLD,'right',false)
+    }
+  }
+});
+
+// Chart 2 – 成交量+均總價 分佈 (bar+line)
+new Chart(document.getElementById('chart2'), {
+  type:'bar',
+  data:{
+    labels: years,
+    datasets:[
+      { label:'成交量（筆）', data:counts, backgroundColor: years.map(y=>y>=2024?'rgba(184,64,64,0.7)':'rgba(74,159,207,0.55)'), borderColor:BLUE, borderWidth:1, yAxisID:'y' },
+      { type:'line', label:'均總價（萬）', data:avgPrice, borderColor:GOLD, backgroundColor:'transparent', yAxisID:'y2', tension:0.3, borderWidth:2.5, pointRadius:4, pointBackgroundColor:GOLD }
+    ]
+  },
+  options:{
+    ...commonOpts,
+    scales:{
+      x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
+      y: makeAxis('成交量（筆）',BLUE,'left'),
+      y2: makeAxis('均總價（萬）',GOLD,'right',false)
+    }
+  }
+});
+
+// Chart 3 – 成交量+單價 趨勢 (line)
+new Chart(document.getElementById('chart3'), {
+  type:'line',
+  data:{
+    labels: years,
+    datasets:[
+      { label:'成交量（筆）', data:counts, borderColor:BLUE, backgroundColor:BLUE2, yAxisID:'y', tension:0.4, fill:true, pointRadius:3, borderWidth:2 },
+      { label:'均純單價（萬/坪）', data:avgUnit, borderColor:'#e06c3a', backgroundColor:'transparent', yAxisID:'y2', tension:0.4, borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#e06c3a' }
+    ]
+  },
+  options:{
+    ...commonOpts,
+    scales:{
+      x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
+      y: makeAxis('成交量（筆）',BLUE,'left'),
+      y2: makeAxis('均單價（萬/坪）','#e06c3a','right',false)
+    }
+  }
+});
+
+// Chart 4 – 成交量+單價 分佈 (bar+line)
+new Chart(document.getElementById('chart4'), {
+  type:'bar',
+  data:{
+    labels: years,
+    datasets:[
+      { label:'成交量（筆）', data:counts, backgroundColor: years.map(y=>y>=2024?'rgba(184,64,64,0.7)':'rgba(74,159,207,0.55)'), borderColor:BLUE, borderWidth:1, yAxisID:'y' },
+      { type:'line', label:'均純單價（萬/坪）', data:avgUnit, borderColor:'#e06c3a', backgroundColor:'transparent', yAxisID:'y2', tension:0.3, borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#e06c3a' }
+    ]
+  },
+  options:{
+    ...commonOpts,
+    scales:{
+      x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
+      y: makeAxis('成交量（筆）',BLUE,'left'),
+      y2: makeAxis('均單價（萬/坪）','#e06c3a','right',false)
+    }
+  }
+});
+
+// Chart 5 – 總價散點
+const scatterDatasets = years.map((yr, i) => ({
+  label: yr===2026 ? '本物件' : yr.toString(),
+  data: (allData[yr]||[]).map(p => ({ x: yr, y: p })),
+  backgroundColor: yr===2026 ? 'rgba(201,168,76,0.9)' : yr>=2024 ? 'rgba(184,64,64,0.45)' : 'rgba(74,159,207,0.35)',
+  pointRadius: yr===2026 ? 10 : 5,
+  pointStyle: yr===2026 ? 'star' : 'circle',
+  showLine: false
+}));
+
+// Add avg line
+const avgLineDataset = {
+  label: '年均總價',
+  data: years.map((yr,i)=>({ x:yr, y:avgPrice[i] })),
+  borderColor: GOLD,
+  backgroundColor: 'transparent',
+  pointRadius: 3,
+  pointBackgroundColor: GOLD,
+  showLine: true,
+  borderWidth: 2,
+  tension: 0.3,
+  type: 'line'
+};
+
+new Chart(document.getElementById('chart5'), {
+  type:'scatter',
+  data:{ datasets:[...scatterDatasets, avgLineDataset] },
+  options:{
+    responsive:true,
+    maintainAspectRatio:true,
+    plugins:{
+      legend:{ display:false },
+      tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x}年: ${ctx.parsed.y}萬` } }
+    },
+    scales:{
+      x:{ type:'linear', min:2011, max:2027, ticks:{stepSize:1, font:{size:9}, color:'#8a7d6b', callback:v=>Number.isInteger(v)?v:''}, grid:{display:false} },
+      y:{ beginAtZero:true, title:{display:true,text:'總價（萬）',color:GOLD,font:{size:10}}, ticks:{font:{size:9},color:'#8a7d6b'}, grid:{color:'rgba(0,0,0,0.04)'} }
+    }
+  }
+});
+</script>
+
+<div style="height:60px;"></div><!-- spacer for sticky bar -->
+</body>
+</html>
