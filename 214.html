@@ -420,7 +420,7 @@
     <div class="price-note">
       依實價登錄同弄成交紀錄<br>
       <strong>市場行情顯著低估</strong><br>
-      同弄4號 2014年已成交 930萬，今日行情早已翻升
+      2025年均價1789萬，單價47.5萬，行情早已翻升
     </div>
   </div>
   <div class="scroll-hint">往下滑覽</div>
@@ -525,22 +525,10 @@
     以下圖表來源：實價登錄 大樹林段 透天・住宅區・都市土地 有效成交資料（2012–2026 共128筆）
   </p>
 
-  <!-- Chart 1: 成交量+總價 趨勢 -->
-  <div class="chart-wrap">
-    <div class="chart-title">📈 歷年成交量（左軸）與均價（右軸）趨勢圖</div>
-    <canvas id="chart1" height="220"></canvas>
-  </div>
-
   <!-- Chart 2: 成交量+總價 分佈 -->
   <div class="chart-wrap">
     <div class="chart-title">📊 歷年成交量（左軸）與均總價（右軸）分佈圖</div>
     <canvas id="chart2" height="220"></canvas>
-  </div>
-
-  <!-- Chart 3: 成交量+單價 趨勢 -->
-  <div class="chart-wrap">
-    <div class="chart-title">📈 歷年成交量（左軸）與純單價（右軸）趨勢圖</div>
-    <canvas id="chart3" height="220"></canvas>
   </div>
 
   <!-- Chart 4: 成交量+單價 分佈 -->
@@ -779,26 +767,6 @@ function makeAxis(label, color, position, beginZero=true) {
   };
 }
 
-// Chart 1 – 成交量+均總價 趨勢 (line)
-new Chart(document.getElementById('chart1'), {
-  type:'line',
-  data:{
-    labels: years,
-    datasets:[
-      { label:'成交量（筆）', data:counts, borderColor:BLUE, backgroundColor:BLUE2, yAxisID:'y', tension:0.4, fill:true, pointRadius:3, borderWidth:2 },
-      { label:'均總價（萬）', data:avgPrice, borderColor:GOLD, backgroundColor:'transparent', yAxisID:'y2', tension:0.4, borderWidth:2.5, pointRadius:4, pointBackgroundColor:GOLD }
-    ]
-  },
-  options:{
-    ...commonOpts,
-    scales:{
-      x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
-      y: makeAxis('成交量（筆）',BLUE,'left'),
-      y2: makeAxis('均總價（萬）',GOLD,'right',false)
-    }
-  }
-});
-
 // Chart 2 – 成交量+均總價 分佈 (bar+line)
 new Chart(document.getElementById('chart2'), {
   type:'bar',
@@ -815,26 +783,6 @@ new Chart(document.getElementById('chart2'), {
       x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
       y: makeAxis('成交量（筆）',BLUE,'left'),
       y2: makeAxis('均總價（萬）',GOLD,'right',false)
-    }
-  }
-});
-
-// Chart 3 – 成交量+單價 趨勢 (line)
-new Chart(document.getElementById('chart3'), {
-  type:'line',
-  data:{
-    labels: years,
-    datasets:[
-      { label:'成交量（筆）', data:counts, borderColor:BLUE, backgroundColor:BLUE2, yAxisID:'y', tension:0.4, fill:true, pointRadius:3, borderWidth:2 },
-      { label:'均純單價（萬/坪）', data:avgUnit, borderColor:'#e06c3a', backgroundColor:'transparent', yAxisID:'y2', tension:0.4, borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#e06c3a' }
-    ]
-  },
-  options:{
-    ...commonOpts,
-    scales:{
-      x:{ ticks:{font:{size:9},color:'#8a7d6b'}, grid:{display:false} },
-      y: makeAxis('成交量（筆）',BLUE,'left'),
-      y2: makeAxis('均單價（萬/坪）','#e06c3a','right',false)
     }
   }
 });
