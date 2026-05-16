@@ -8,24 +8,90 @@
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
+  <script data-goatcounter="https://realyang888.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="map.css" />
+
+  <style>
+    /* ── 鎖定畫面 ── */
+    #lockscreen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #0f1117;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    .lock-card {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 20px;
+      padding: 48px 40px;
+      text-align: center;
+      max-width: 360px;
+      width: 90%;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    }
+    .lock-icon { font-size: 48px; margin-bottom: 16px; }
+    .lock-title { font-size: 20px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
+    .lock-msg { font-size: 13px; color: #718096; line-height: 1.6; }
+    .lock-msg code { color: #90b4e8; background: #1a2744; padding: 2px 6px; border-radius: 4px; }
+
+    /* ── 載入中 overlay ── */
+    #loadingOverlay {
+      position: fixed; inset: 0; z-index: 8888;
+      background: rgba(15,17,23,.92);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Noto Sans TC', sans-serif;
+      backdrop-filter: blur(4px);
+    }
+    .loading-inner { text-align: center; color: #e2e8f0; }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #2d3748;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: #a0aec0; }
+  </style>
 </head>
 <body>
-<div id="app">
+
+<!-- ══ 鎖定畫面（預設顯示，驗證後隱藏） ══ -->
+<div id="lockscreen">
+  <div class="lock-card">
+    <div class="lock-icon">🔐</div>
+    <div class="lock-title">存取受限</div>
+    <div class="lock-msg">
+      請確認您使用的是正確的連結。<br><br>
+      如需協助，請聯絡<br>
+      <code>小楊房屋</code>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 載入 overlay ══ -->
+<div id="loadingOverlay" style="display:none">
+  <div class="loading-inner">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">載入物件資料中…</div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
 
   <!-- ══ SIDEBAR ══ -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h2>🏠 小楊房屋委託</h2>
+      <h2 id="sidebarTitle">🏠 小楊房屋</h2>
       <input class="search-input" v-model="filters.keyword" placeholder="搜尋案名 / 區域 / 地段…" />
     </div>
 
@@ -35,20 +101,18 @@
       <div class="filter-section">
         <div class="filter-title">快速篩選</div>
         <div class="quick-tags">
-          <div class="quick-tag" @click="quickType('主攻','開發')" :class="{active: filters.quickValue==='主攻'}">主攻</div>
-          <div class="quick-tag" @click="quickType('小楊','開發')" :class="{active: filters.quickValue==='小楊'}">小楊</div>
-          <div class="quick-tag" @click="quickType('配案','開發')" :class="{active: filters.quickValue==='配案'}">配案</div>
-          <div class="quick-tag" @click="quickType('土地','類型')" :class="{active: filters.quickValue==='土地'}">土地</div>
-          <div class="quick-tag" @click="quickType('房屋','類型')" :class="{active: filters.quickValue==='房屋'}">房屋</div>
-          <div class="quick-tag" @click="quickType('低總價','價格區間')" :class="{active: filters.quickValue==='低總價'}">低總價</div>
-          <div class="quick-tag" @click="quickType('中價位','價格區間')" :class="{active: filters.quickValue==='中價位'}">中價位</div>
-          <div class="quick-tag" @click="quickType('高價位','價格區間')" :class="{active: filters.quickValue==='高價位'}">高價位</div>
-          <div class="quick-tag" @click="quickType('豪宅','價格區間')" :class="{active: filters.quickValue==='豪宅'}">豪宅</div>
+          <div
+            v-for="tag in modeConfig.quickTags"
+            :key="tag.value"
+            class="quick-tag"
+            @click="quickType(tag.value, tag.key)"
+            :class="{active: filters.quickValue === tag.value}"
+          >{{ tag.label }}</div>
         </div>
       </div>
 
       <!-- 行政區 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.area">
         <div class="filter-title">行政區</div>
         <div class="checkbox-grid">
           <label class="checkbox-item" v-for="area in areaOptions" :key="area">
@@ -58,7 +122,7 @@
       </div>
 
       <!-- 村里 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.village">
         <div class="filter-title">村里</div>
         <div class="checkbox-grid">
           <label class="checkbox-item" v-for="village in villageOptions" :key="village">
@@ -68,7 +132,7 @@
       </div>
 
       <!-- 建物型態 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.buildType">
         <div class="filter-title">建物型態</div>
         <div class="checkbox-grid">
           <label class="checkbox-item" v-for="bt in buildTypeOptions" :key="bt">
@@ -78,7 +142,7 @@
       </div>
 
       <!-- 房間數 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.rooms">
         <div class="filter-title">房間數</div>
         <div class="checkbox-grid">
           <label class="checkbox-item" v-for="r in roomOptions" :key="r">
@@ -88,7 +152,7 @@
       </div>
 
       <!-- 座向 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.direction">
         <div class="filter-title">座向</div>
         <div class="checkbox-grid">
           <label class="checkbox-item" v-for="r in directionOptions" :key="r">
@@ -98,7 +162,7 @@
       </div>
 
       <!-- 使用分區 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.usage">
         <div class="filter-title">使用分區</div>
         <div class="checkbox-grid">
           <label class="checkbox-item" v-for="u in usageOptions" :key="u">
@@ -108,7 +172,7 @@
       </div>
 
       <!-- 總價 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.price">
         <div class="filter-title">總價（萬）</div>
         <div class="range-row">
           <input class="range-input" v-model.number="filters.priceMin" placeholder="最低" type="number" />
@@ -117,7 +181,7 @@
       </div>
 
       <!-- 單價 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.unitPrice">
         <div class="filter-title">單價（萬/坪）</div>
         <div class="range-row">
           <input class="range-input" v-model.number="filters.unitPriceMin" placeholder="最低" type="number" />
@@ -126,7 +190,7 @@
       </div>
 
       <!-- 總坪數 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.ping">
         <div class="filter-title">總坪數</div>
         <div class="range-row">
           <input class="range-input" v-model.number="filters.pingMin" placeholder="最低" type="number" />
@@ -135,7 +199,7 @@
       </div>
 
       <!-- 土地坪數 -->
-      <div class="filter-section">
+      <div class="filter-section" v-if="modeConfig.filters.land">
         <div class="filter-title">土地坪數</div>
         <div class="range-row">
           <input class="range-input" v-model.number="filters.landMin" placeholder="最小" type="number" />
@@ -188,10 +252,10 @@
             <th style="width:80px">格局</th>
             <th style="width:60px">總建坪</th>
             <th style="width:60px">主建物</th>
-            <th style="width:60px">地坪</th>
-            <th style="width:70px">使用分區</th>
+            <th v-if="modeConfig.columns.landPing" style="width:60px">地坪</th>
+            <th v-if="modeConfig.columns.usage" style="width:70px">使用分區</th>
             <th style="width:70px">建物型態</th>
-              <th style="width:70px">座向</th>
+            <th v-if="modeConfig.columns.direction" style="width:70px">座向</th>
             <th style="width:70px">操作</th>
           </tr>
         </thead>
@@ -202,40 +266,54 @@
                 <div>
                   <a :href="`https://dennytlyang666.github.io/house/${item.id}`" target="_blank" class="title-link">{{ item.案名 }}</a>
                 </div>
-                <div style="font-size:11px;color:#999;margin-top:2px;">
-                    {{ item.開發 }}
+                <!-- 開發資訊（staff/yang 模式才顯示） -->
+                <div v-if="modeConfig.columns.dev" style="font-size:11px;color:#999;margin-top:2px;">
+                  <span v-if="modeConfig.columns.dev">{{ item.開發 }}&nbsp;</span>
+                  <template v-if="modeConfig.showLinks">
                     <a :href="item.廣告" target="_blank" rel="noopener" v-if="item.廣告" style="font-size:12px;color:var(--accent);">
-                        <i class="fa-brands fa-facebook"></i>
+                      <i class="fa-brands fa-facebook"></i>
                     </a>&nbsp;
                     <a :href="item.YouTube" target="_blank" rel="noopener" v-if="item.YouTube" style="font-size:12px;color:var(--accent);">
-                        <i class="fa-brands fa-youtube"></i>
+                      <i class="fa-brands fa-youtube"></i>
                     </a>&nbsp;
-                    <a v-if="item.lat && item.lng" @click="jumpToMap(item)"><i class="fa-solid fa-location-dot"></i></a>
+                  </template>
+                  <a v-if="modeConfig.showMapIcon && item.lat && item.lng" @click="jumpToMap(item)" style="cursor:pointer">
+                    <i class="fa-solid fa-location-dot"></i>
+                  </a>
+                </div>
+                <!-- 非開發欄模式：只顯示地圖 icon（視 showMapIcon） -->
+                <div v-else-if="modeConfig.showMapIcon && item.lat && item.lng" style="font-size:11px;color:#999;margin-top:2px;">
+                  <a @click="jumpToMap(item)" style="cursor:pointer;color:var(--accent)">
+                    <i class="fa-solid fa-location-dot"></i> 查看地圖
+                  </a>
                 </div>
               </td>
-              <td style="font-size: 12px">{{ item.縣市 }} {{ item.村里 || item.分區 }}<br>{{item.地址 || item.地段 + item.地號}}</td>
+              <td style="font-size:12px">
+                {{ item.縣市 }} {{ modeConfig.filters.village ? (item.村里 || item.分區) : item.分區 }}<br>
+                <span style="color:#aaa">{{item.地址 || (item.地段 + item.地號)}}</span>
+              </td>
               <td class="price">{{ item.委託價 }}萬</td>
               <td class="price">{{ unitPrice(item) }}萬</td>
               <td>{{ item.格局 }}</td>
               <td>{{ item.總坪數 || '-' }}</td>
               <td>{{ item.主建物 || '-' }}</td>
-              <td>{{ item.土地坪數 || '-' }}</td>
-              <td>{{ item.使用分區 || '-' }}</td>
+              <td v-if="modeConfig.columns.landPing">{{ item.土地坪數 || '-' }}</td>
+              <td v-if="modeConfig.columns.usage">{{ item.使用分區 || '-' }}</td>
               <td>{{ item.建物型態 }}</td>
-              <td>{{ item.座向 }}</td>
+              <td v-if="modeConfig.columns.direction">{{ item.座向 || '-' }}</td>
               <td>
                 <span class="expand-btn" @click="toggleExpand(item.id)">
-                  {{ expandedIds.includes(item.id) ? '▲ 收合' : '▼ 詳細' }}
+                  {{ expandedIds.includes(item.id) ? '▲收合' : '▼詳細' }}
                 </span>
-<!--                <button class="map-btn" v-if="item.lat && item.lng" @click="jumpToMap(item)">📍 地圖</button>-->
               </td>
             </tr>
             <!-- 展開詳細 -->
             <tr v-if="expandedIds.includes(item.id)">
-              <td colspan="11">
+              <td :colspan="colSpan">
                 <div class="detail-box">
                   <div class="detail-grid">
-                    <div class="detail-card">
+                    <!-- 基本資訊（staff/yang 才顯示） -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.basicInfo">
                       <div class="detail-title">基本資訊</div>
                       <div class="detail-item">📍 地段：{{ item.地段 }}</div>
                       <div class="detail-item">🧾 地號：{{ item.地號 }}</div>
@@ -244,19 +322,22 @@
                       <div class="detail-item" v-if="item.臨路">🚗 臨路：{{ item.臨路 }}</div>
                       <div class="detail-item" v-if="item.lat">🌐 座標：{{ item.lat.toFixed(4) }}, {{ item.lng.toFixed(4) }}</div>
                     </div>
-                    <div class="detail-card" v-if="item.簡短特色">
+                    <!-- 物件特色 -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.feature && item.簡短特色">
                       <div class="detail-title">物件特色</div>
                       <ul class="feature-list">
                         <li v-for="f in item.簡短特色" :key="f">{{ f }}</li>
                       </ul>
                     </div>
-                    <div class="detail-card">
+                    <!-- 學區 / 市場 -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.school">
                       <div class="detail-title">學區 / 市場 / 公園</div>
                       <div class="detail-item" v-if="item.學區">🎓 {{ item.學區.join('、') }}</div>
                       <div class="detail-item" v-if="item.市場 && item.市場.length">🛒 {{ item.市場.join('、') }}</div>
                       <div class="detail-item" v-if="item.公園">🌳 {{ item.公園.join('、') }}</div>
                     </div>
-                    <div class="detail-card" v-if="item.機能">
+                    <!-- 生活機能 -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.amenity && item.機能">
                       <div class="detail-title">生活機能</div>
                       <ul class="feature-list">
                         <li v-for="m in item.機能" :key="m">{{ m }}</li>
@@ -292,8 +373,74 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="./config.js"></script>
+
 <script>
-const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+// ══════════════════════════════════════════
+//  Step 1: 讀 URL hash → 決定模式
+// ══════════════════════════════════════════
+const hashKey = window.location.hash.replace('#', '').split('?')[0].trim();
+const modeName = SITE_CONFIG.KEYS[hashKey] || null;
+
+// 實際加密金鑰 = 反轉 hash + 私密 salt（兩者缺一不可）
+function buildCryptoKey(key) {
+  return key.split('').reverse().join('') + 'yangs591';
+}
+
+if (!modeName) {
+  // 未知密鑰：依設定決定是否顯示鎖定畫面
+  if (SITE_CONFIG.UNKNOWN_KEY_ACTION === 'block') {
+    // lockscreen 已在 HTML 預設顯示，不做任何事
+    document.title = '存取受限';
+    throw new Error('Access denied');
+  }
+}
+
+const modeConfig = SITE_CONFIG.MODES[modeName || SITE_CONFIG.UNKNOWN_KEY_ACTION];
+
+// 設定 title
+document.title = modeConfig.title;
+document.getElementById('sidebarTitle').textContent = modeConfig.sidebarTitle;
+
+// 隱藏鎖定畫面，顯示主介面
+document.getElementById('lockscreen').style.display = 'none';
+document.getElementById('loadingOverlay').style.display = 'flex';
+document.getElementById('app').style.display = 'flex';
+
+// ══════════════════════════════════════════
+//  Step 2: 解密函式（AES-GCM + PBKDF2）
+// ══════════════════════════════════════════
+async function decryptData(encBuffer, keyStr) {
+  const enc = new TextEncoder();
+  const data = new Uint8Array(encBuffer);
+
+  // 驗證 magic header
+  const magic = String.fromCharCode(...data.slice(0, 4));
+  if (magic !== 'YHEN') throw new Error('無效的加密檔案格式');
+
+  const salt = data.slice(4, 20);
+  const iv   = data.slice(20, 32);
+  const cipher = data.slice(32);
+
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(keyStr), 'PBKDF2', false, ['deriveKey']
+  );
+  const aesKey = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+
+  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, cipher);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+
+// ══════════════════════════════════════════
+//  Step 3: Vue 應用
+// ══════════════════════════════════════════
+const { createApp, ref, computed, watch, nextTick } = Vue;
 
 createApp({
   data() {
@@ -301,8 +448,9 @@ createApp({
       rawData: [],
       expandedIds: [],
       sortKey: 'price_desc',
-      view: 'table', // 'table' | 'map'
+      view: 'table',
       selectedMapId: null,
+      modeConfig,
 
       filters: {
         keyword: '',
@@ -324,7 +472,6 @@ createApp({
         landMax: null,
       },
 
-      // Leaflet
       _map: null,
       _markerGroup: null,
       _markerMap: {},
@@ -332,6 +479,17 @@ createApp({
   },
 
   computed: {
+    // 依模式決定 colspan
+    colSpan() {
+      const c = this.modeConfig.columns;
+      let n = 2; // 基本固定欄
+      if (c.dev) n++;
+      if (c.landPing) n++;
+      if (c.usage) n++;
+      if (c.direction) n++;
+      return n;
+    },
+
     areaOptions() {
       return [...new Set(this.rawData.map(i => String(i.分區 || '').trim()))].filter(Boolean).sort();
     },
@@ -342,7 +500,7 @@ createApp({
       return [...new Set(this.rawData.map(i => i.房間數量).filter(Boolean))].sort((a,b)=>a-b);
     },
     directionOptions() {
-      return [...new Set(this.rawData.map(i => i.座向).filter(Boolean))].sort((a,b)=>a-b);
+      return [...new Set(this.rawData.map(i => i.座向).filter(Boolean))].sort();
     },
     usageOptions() {
       return [...new Set(this.rawData.map(i => i.使用分區).filter(Boolean))];
@@ -358,11 +516,11 @@ createApp({
           const text = `${item.案名} ${item.分區} ${item.地段}`.toLowerCase();
           if (!text.includes(kw)) return false;
         }
-        if (this.filters.rooms.length && !this.filters.rooms.includes(item.房間數量)) return false;
+        if (this.filters.rooms.length    && !this.filters.rooms.includes(item.房間數量)) return false;
         if (this.filters.directions.length && !this.filters.directions.includes(item.座向)) return false;
-        if (this.filters.usages.length && !this.filters.usages.includes(item.使用分區)) return false;
+        if (this.filters.usages.length   && !this.filters.usages.includes(item.使用分區)) return false;
         if (this.filters.quickKey && item[this.filters.quickKey] !== this.filters.quickValue) return false;
-        if (this.filters.areas.length && !this.filters.areas.includes(item.分區)) return false;
+        if (this.filters.areas.length    && !this.filters.areas.includes(item.分區)) return false;
         if (this.filters.villages.length && !this.filters.villages.includes(item.村里)) return false;
         if (this.filters.buildTypes.length && !this.filters.buildTypes.includes(item.建物型態?.trim())) return false;
         if (this.filters.priceMin !== null && item.委託價 < this.filters.priceMin) return false;
@@ -389,12 +547,11 @@ createApp({
           case 'ping_asc':  return (a.總坪數 || 0) - (b.總坪數 || 0);
           case 'land_desc': return (b.土地坪數 || 0) - (a.土地坪數 || 0);
           case 'land_asc':  return (a.土地坪數 || 0) - (b.土地坪數 || 0);
-          case 'id_desc':  return (b.id || 0) - (a.id || 0);
+          case 'id_desc': return (b.id || 0) - (a.id || 0);
           case 'id_asc':  return (a.id || 0) - (b.id || 0);
         }
         return 0;
       });
-
       return data;
     },
 
@@ -402,7 +559,6 @@ createApp({
       if (!this.filteredData.length) return 0;
       return Math.round(this.filteredData.reduce((s, i) => s + i.委託價, 0) / this.filteredData.length);
     },
-
     medianPrice() {
       if (!this.filteredData.length) return 0;
       const prices = [...this.filteredData].map(i => i.委託價).sort((a,b) => a-b);
@@ -425,75 +581,51 @@ createApp({
       }
       return (item.委託價 / item.總坪數).toFixed(2);
     },
-
     toggleExpand(id) {
       const idx = this.expandedIds.indexOf(id);
       if (idx >= 0) this.expandedIds.splice(idx, 1);
       else this.expandedIds.push(id);
     },
-
     quickType(value, key) {
       if (this.filters.quickKey === key && this.filters.quickValue === value) {
-        this.filters.quickKey = '';
-        this.filters.quickValue = '';
+        this.filters.quickKey = ''; this.filters.quickValue = '';
       } else {
-        this.filters.quickKey = key;
-        this.filters.quickValue = value;
+        this.filters.quickKey = key; this.filters.quickValue = value;
       }
     },
-
     resetFilters() {
       this.filters = {
-        keyword: '', areas: [], rooms: [], usages: [],
-        quickKey: '', quickValue: '', buildTypes: [],
-        priceMin: null, priceMax: null,
-        unitPriceMin: null, unitPriceMax: null,
-        pingMin: null, pingMax: null,
-        landMin: null, landMax: null,
+        keyword: '', areas: [], villages: [], rooms: [], directions: [],
+        usages: [], quickKey: '', quickValue: '', buildTypes: [],
+        priceMin: null, priceMax: null, unitPriceMin: null, unitPriceMax: null,
+        pingMin: null, pingMax: null, landMin: null, landMax: null,
       };
     },
 
     switchView(v) {
       this.view = v;
       if (v === 'map') {
-        // v-if 讓 #map DOM 這一幀才出現，需等下一幀 Leaflet 才能取到正確容器尺寸
         nextTick(() => {
-          if (this._map) {
-            // 已初始化過：invalidateSize 修正容器尺寸，然後 fit
-            this._map.invalidateSize();
-            this.renderMarkers(true);
-          } else {
-            this.initMap();
-            this.renderMarkers(true);
-          }
+          if (this._map) { this._map.invalidateSize(); this.renderMarkers(true); }
+          else { this.initMap(); this.renderMarkers(true); }
         });
       } else {
-        // 切回列表時把地圖實例銷毀，下次切回地圖重建（避免 v-if 重掛時 container 錯亂）
         if (this._map) {
           this._map.remove();
-          this._map = null;
-          this._markerGroup = null;
-          this._markerMap = {};
+          this._map = null; this._markerGroup = null; this._markerMap = {};
         }
       }
     },
 
-    // ── 從列表跳到地圖並 fly 到指定點
     jumpToMap(item) {
       this.view = 'map';
       nextTick(() => {
-        if (this._map) {
-          this._map.invalidateSize();
-          this.renderMarkers(false);
-        } else {
-          this.initMap();
-          this.renderMarkers(false);
-        }
+        if (this._map) { this._map.invalidateSize(); this.renderMarkers(false); }
+        else { this.initMap(); this.renderMarkers(false); }
         setTimeout(() => this.focusMarker(item), 250);
       });
     },
 
-    // ── 依總價決定顏色段
     priceColor(price) {
       if (price < 1000)  return 'green';
       if (price < 3000)  return 'blue';
@@ -501,20 +633,16 @@ createApp({
       return 'red';
     },
 
-    // ── Leaflet init (idempotent)
     initMap() {
       if (this._map) return;
       const map = L.map('map', {
-        zoomControl: false,
-        zoomAnimation: true,
-        markerZoomAnimation: false, // 禁止 marker 跟著 zoom 動畫移動，避免動畫中計算座標出錯
-        preferCanvas: true,         // 用 Canvas 渲染，減少 DOM 操作錯誤
+        zoomControl: false, zoomAnimation: true,
+        markerZoomAnimation: false, preferCanvas: true,
       }).setView([24.97, 121.28], 11);
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
+        subdomains: 'abcd', maxZoom: 20,
       }).addTo(map);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -527,12 +655,9 @@ createApp({
           if (zoom >= 12) return 50;
           return 70;
         },
-        disableClusteringAtZoom: 16,
-        spiderfyOnMaxZoom: false,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true,
-        animateAddingMarkers: false,
-        removeOutsideVisibleBounds: false, // 保留視窗外的 marker，避免縮放時重算出錯
+        disableClusteringAtZoom: 16, spiderfyOnMaxZoom: false,
+        showCoverageOnHover: false, zoomToBoundsOnClick: true,
+        animateAddingMarkers: false, removeOutsideVisibleBounds: false,
         iconCreateFunction: (cluster) => {
           const n = cluster.getChildCount();
           let cls = 'cb-sm';
@@ -541,45 +666,30 @@ createApp({
           else if (n >= 5) cls = 'cb-md';
           const size = n >= 20 ? 52 : 44;
           return L.divIcon({
-            html: `<div class="cluster-badge ${cls}">
-                     <div class="cb-num">${n}</div>
-                     <div class="cb-lbl">筆</div>
-                   </div>`,
-            className: '',
-            iconSize: [size, size],
-            iconAnchor: [size/2, size/2],
+            html: `<div class="cluster-badge ${cls}"><div class="cb-num">${n}</div><div class="cb-lbl">筆</div></div>`,
+            className: '', iconSize: [size, size], iconAnchor: [size/2, size/2],
           });
         },
       });
       map.addLayer(markerGroup);
 
-      // zoomend 後每 2 個級距重建一次 markers（完全等動畫結束才算）
       let lastRenderZoom = map.getZoom();
       map.on('zoomend', () => {
         const z = map.getZoom();
-        if (Math.abs(z - lastRenderZoom) >= 2) {
-          lastRenderZoom = z;
-          this.renderMarkers(false);
-        }
+        if (Math.abs(z - lastRenderZoom) >= 2) { lastRenderZoom = z; this.renderMarkers(false); }
       });
 
-      this._map = map;
-      this._markerGroup = markerGroup;
-      this._markerMap = {};
+      this._map = map; this._markerGroup = markerGroup; this._markerMap = {};
     },
 
     makeIcon(item, selected = false) {
       const col = this.priceColor(item.委託價);
-      const label = item.委託價 >= 10000
-        ? (item.委託價 / 10000).toFixed(1) + '億'
-        : item.委託價 + '萬';
+      const label = item.委託價 >= 10000 ? (item.委託價 / 10000).toFixed(1) + '億' : item.委託價 + '萬';
       const selCls = selected ? ' selected' : '';
       const w = label.length > 5 ? label.length * 9 + 20 : 70;
       return L.divIcon({
         html: `<div class="pm pm-${col}${selCls}"><span class="pm-dot"></span>${label}</div>`,
-        className: '',
-        iconSize: [w, 26],
-        iconAnchor: [w / 2, 31], // 31 = 26px高 + 5px小三角
+        className: '', iconSize: [w, 26], iconAnchor: [w / 2, 31],
       });
     },
 
@@ -587,7 +697,6 @@ createApp({
       if (!this._map) return;
       this._markerGroup.clearLayers();
       this._markerMap = {};
-
       const withGeo = this.filteredData.filter(i => i.lat && i.lng);
 
       withGeo.forEach(item => {
@@ -602,13 +711,16 @@ createApp({
           const col = this.priceColor(item.委託價);
           const colMap = { green:'#15803d', blue:'#1d4ed8', orange:'#c2410c', red:'#991b1b' };
           const pingVal = item.總坪數 || item.土地坪數 || '-';
+          // 開發標籤（依模式決定是否顯示）
+          const devBadge = this.modeConfig.popupShowDev && item.開發
+            ? `<span class="popup-badge">${item.開發}</span>` : '';
           d.innerHTML = `
             <div class="popup-header">
               <div class="popup-name">${item.案名}</div>
               <div class="popup-badges">
                 <span class="popup-badge type">${item.建物型態 || '物件'}</span>
                 <span class="popup-badge">${item.縣市}${item.分區}</span>
-                ${item.開發 ? `<span class="popup-badge">${item.開發}</span>` : ''}
+                ${devBadge}
               </div>
             </div>
             <div class="popup-price-row">
@@ -616,18 +728,9 @@ createApp({
               <div class="popup-unit-price">單價 <strong>${up} 萬/坪</strong></div>
             </div>
             <div class="popup-stats">
-              <div class="popup-stat">
-                <div class="popup-stat-val">${pingVal}</div>
-                <div class="popup-stat-lbl">坪數</div>
-              </div>
-              <div class="popup-stat">
-                <div class="popup-stat-val" style="font-size:11px">${item.格局 || '-'}</div>
-                <div class="popup-stat-lbl">格局</div>
-              </div>
-              <div class="popup-stat">
-                <div class="popup-stat-val">${item.土地坪數 || '-'}</div>
-                <div class="popup-stat-lbl">地坪</div>
-              </div>
+              <div class="popup-stat"><div class="popup-stat-val">${pingVal}</div><div class="popup-stat-lbl">坪數</div></div>
+              <div class="popup-stat"><div class="popup-stat-val" style="font-size:11px">${item.格局 || '-'}</div><div class="popup-stat-lbl">格局</div></div>
+              <div class="popup-stat"><div class="popup-stat-val">${item.土地坪數 || '-'}</div><div class="popup-stat-lbl">地坪</div></div>
             </div>
             <div class="popup-footer">
               <button class="popup-btn" onclick="window.__vueApp__.jumpToMapItem(${item.id})">切換至列表查看詳情 →</button>
@@ -641,7 +744,6 @@ createApp({
         this._markerMap[item.id] = marker;
       });
 
-      // 自動調整視野涵蓋所有點
       if (fitBounds && withGeo.length > 0) {
         const bounds = L.latLngBounds(withGeo.map(i => [i.lat, i.lng]));
         this._map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
@@ -650,30 +752,20 @@ createApp({
 
     focusMarker(item) {
       this.selectedMapId = item.id;
-      // 更新所有 icon 樣式
       Object.entries(this._markerMap).forEach(([id, m]) => {
         const found = this.filteredData.find(i => i.id === Number(id));
         if (found) m.setIcon(this.makeIcon(found, Number(id) === item.id));
       });
       const marker = this._markerMap[item.id];
       if (!marker || !this._map) return;
-
-      const currentZoom = this._map.getZoom();
-      const targetZoom = Math.max(currentZoom, 17); // 至少 zoom 17，確保超過 disableClusteringAtZoom(16)
-
+      const targetZoom = Math.max(this._map.getZoom(), 17);
       this._map.flyTo([item.lat, item.lng], targetZoom, { animate: true, duration: 0.6 });
-
-      // flyTo 結束後開 popup（moveend 只觸發一次）
-      this._map.once('moveend', () => {
-        marker.openPopup();
-      });
+      this._map.once('moveend', () => marker.openPopup());
     },
 
-    // called from popup button
     jumpToMapItem(id) {
       const item = this.filteredData.find(i => i.id === id);
       if (!item) return;
-      // 切回列表並展開詳細
       this.view = 'table';
       if (!this.expandedIds.includes(id)) this.expandedIds.push(id);
       nextTick(() => {
@@ -685,19 +777,41 @@ createApp({
     },
   },
 
-  mounted() {
-    // expose for popup buttons
+  async mounted() {
     window.__vueApp__ = this;
 
-    fetch('./output.json')
-      .then(r => r.json())
-      .then(data => {
-        this.rawData = data.filter(item =>
-          String(item.開發 || '').trim() !== '小楊類專' &&
-          item.已售 !== true &&
-          item.停賣 !== true
-        ).map(i => ({ ...i, 建物型態: i.建物型態?.trim() }));
-      });
+    try {
+      // 載入加密檔
+      const resp = await fetch(modeConfig.dataFile, { cache: 'no-cache' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const buf = await resp.arrayBuffer();
+
+      // 解密（金鑰 = 反轉 hash + 私密 salt）
+      const allData = await decryptData(buf, buildCryptoKey(hashKey));
+
+      // 套用模式資料過濾
+      const df = modeConfig.dataFilter;
+      this.rawData = allData.filter(item => {
+        if (item.已售 === true || item.停賣 === true) return false;
+        if (df.excludeDevNames.includes(String(item.開發 || '').trim())) return false;
+        if (df.excludeTypes.length && df.excludeTypes.includes(item.類型)) return false;
+        if (df.onlyDev && String(item.開發 || '').trim() !== df.onlyDev) return false;
+        return true;
+      }).map(i => ({ ...i, 建物型態: i.建物型態?.trim() }));
+
+    } catch (err) {
+      console.error('資料載入失敗：', err);
+      // 顯示錯誤訊息在畫面上
+      document.getElementById('app').innerHTML = `
+        <div style="margin:auto;text-align:center;padding:60px;font-family:sans-serif;color:#666">
+          <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+          <div style="font-size:18px;font-weight:700;color:#333;margin-bottom:8px">資料載入失敗</div>
+          <div style="font-size:13px">${err.message}</div>
+        </div>
+      `;
+    } finally {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
   },
 }).mount('#app');
 </script>
