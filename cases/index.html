@@ -9,6 +9,7 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
   <script data-goatcounter="https://realyang888.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="b8e98626-0ef2-432d-a9e2-7b117b655f99"></script>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -381,6 +382,9 @@
 // ══════════════════════════════════════════
 const hashKey = window.location.hash.replace('#', '').split('?')[0].trim();
 const modeName = SITE_CONFIG.KEYS[hashKey] || null;
+
+console.log(hashKey);
+console.log(modeName);
 
 // 實際加密金鑰 = 反轉 hash + 私密 salt（兩者缺一不可）
 function buildCryptoKey(key) {
