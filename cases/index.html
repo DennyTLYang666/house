@@ -11,6 +11,93 @@
   <script data-goatcounter="https://realyang888.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="b8e98626-0ef2-432d-a9e2-7b117b655f99"></script>
 
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JMNR3VKQE4"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    // 基本設定（模式在驗證後才知道，延遲送 page_view）
+    gtag('config', 'G-JMNR3VKQE4', { send_page_view: false });
+
+    // ── GA 追蹤工具函式（全域可用）──
+    window.GA = {
+      // 初始化：帶入模式名稱，補送 page_view
+      init(modeName) {
+        gtag('set', 'user_properties', { user_mode: modeName });
+        gtag('event', 'page_view', {
+          user_mode: modeName,
+          page_title: document.title,
+          page_location: window.location.href,
+        });
+      },
+      // 切換檢視（列表 / 地圖）
+      switchView(view, modeName) {
+        gtag('event', 'switch_view', { view_type: view, user_mode: modeName });
+      },
+      // 點擊案件（展開詳細）
+      expandCase(item, modeName) {
+        gtag('event', 'expand_case', {
+          case_id:   item.id,
+          case_name: item.案名,
+          case_area: item.分區,
+          case_price: item.委託價,
+          user_mode: modeName,
+        });
+      },
+      // 點擊案件標題連結
+      clickCaseLink(item, modeName) {
+        gtag('event', 'click_case_link', {
+          case_id:   item.id,
+          case_name: item.案名,
+          user_mode: modeName,
+        });
+      },
+      // 跳轉地圖（從列表點地圖 icon）
+      jumpToMap(item, modeName) {
+        gtag('event', 'jump_to_map', {
+          case_id:   item.id,
+          case_name: item.案名,
+          user_mode: modeName,
+        });
+      },
+      // 點擊地圖 marker（開啟 popup）
+      clickMarker(item, modeName) {
+        gtag('event', 'click_marker', {
+          case_id:   item.id,
+          case_name: item.案名,
+          case_price: item.委託價,
+          user_mode: modeName,
+        });
+      },
+      // 地圖 popup 點「切換至列表」
+      popupToList(item, modeName) {
+        gtag('event', 'popup_to_list', {
+          case_id:   item.id,
+          case_name: item.案名,
+          user_mode: modeName,
+        });
+      },
+      // 點擊導航按鈕
+      navigate(item, modeName) {
+        gtag('event', 'navigate', {
+          case_id:   item.id,
+          case_name: item.案名,
+          user_mode: modeName,
+        });
+      },
+      // 快速篩選 tag
+      quickTag(tag, modeName) {
+        gtag('event', 'quick_tag', { tag_label: tag, user_mode: modeName });
+      },
+      // 搜尋關鍵字（防抖後觸發）
+      search(keyword, modeName) {
+        if (keyword.length < 2) return;
+        gtag('event', 'search', { search_term: keyword, user_mode: modeName });
+      },
+    };
+  </script>
+
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
@@ -401,6 +488,7 @@ if (!modeName) {
 }
 
 const modeConfig = SITE_CONFIG.MODES[modeName || SITE_CONFIG.UNKNOWN_KEY_ACTION];
+modeConfig._name = modeName || 'unknown';
 
 // 設定 title
 document.title = modeConfig.title;
@@ -410,6 +498,9 @@ document.getElementById('sidebarTitle').textContent = modeConfig.sidebarTitle;
 document.getElementById('lockscreen').style.display = 'none';
 document.getElementById('loadingOverlay').style.display = 'flex';
 document.getElementById('app').style.display = 'flex';
+
+// ── GA：帶模式補送 page_view ──
+window.GA.init(modeName);
 
 // ══════════════════════════════════════════
 //  Step 2: 解密函式（AES-GCM + PBKDF2）
@@ -486,7 +577,7 @@ createApp({
     // 依模式決定 colspan
     colSpan() {
       const c = this.modeConfig.columns;
-      let n = 2; // 基本固定欄
+      let n = 8; // 基本固定欄
       if (c.dev) n++;
       if (c.landPing) n++;
       if (c.usage) n++;
@@ -575,6 +666,13 @@ createApp({
     filteredData() {
       if (this.view === 'map' && this._map) this.renderMarkers(true);
     },
+    'filters.keyword': (function() {
+      let timer;
+      return function(val) {
+        clearTimeout(timer);
+        timer = setTimeout(() => window.GA?.search(val, this.modeConfig._name), 800);
+      };
+    })(),
   },
 
   methods: {
@@ -587,14 +685,19 @@ createApp({
     },
     toggleExpand(id) {
       const idx = this.expandedIds.indexOf(id);
-      if (idx >= 0) this.expandedIds.splice(idx, 1);
-      else this.expandedIds.push(id);
+      if (idx >= 0) { this.expandedIds.splice(idx, 1); }
+      else {
+        this.expandedIds.push(id);
+        const item = this.rawData.find(i => i.id === id);
+        if (item) window.GA?.expandCase(item, this.modeConfig._name);
+      }
     },
     quickType(value, key) {
       if (this.filters.quickKey === key && this.filters.quickValue === value) {
         this.filters.quickKey = ''; this.filters.quickValue = '';
       } else {
         this.filters.quickKey = key; this.filters.quickValue = value;
+        window.GA?.quickTag(value, this.modeConfig._name);
       }
     },
     resetFilters() {
@@ -607,6 +710,7 @@ createApp({
     },
 
     switchView(v) {
+      window.GA?.switchView(v, this.modeConfig._name);
       this.view = v;
       if (v === 'map') {
         nextTick(() => {
@@ -622,6 +726,7 @@ createApp({
     },
 
     jumpToMap(item) {
+      window.GA?.jumpToMap(item, this.modeConfig._name);
       this.view = 'map';
       nextTick(() => {
         if (this._map) { this._map.invalidateSize(); this.renderMarkers(false); }
@@ -738,6 +843,7 @@ createApp({
             </div>
             <div class="popup-footer">
               <button class="popup-btn" onclick="window.__vueApp__.jumpToMapItem(${item.id})">切換至列表查看詳情 →</button>
+              ${item.lat && item.lng ? `<button class="popup-btn" style="margin-top:6px;background:#16a34a" onclick="window.__vueApp__.navigateToCase(${item.id})">🧭 Google 導航</button>` : ''}
             </div>
           `;
           return d;
@@ -755,6 +861,7 @@ createApp({
     },
 
     focusMarker(item) {
+      window.GA?.clickMarker(item, this.modeConfig._name);
       this.selectedMapId = item.id;
       Object.entries(this._markerMap).forEach(([id, m]) => {
         const found = this.filteredData.find(i => i.id === Number(id));
@@ -770,6 +877,7 @@ createApp({
     jumpToMapItem(id) {
       const item = this.filteredData.find(i => i.id === id);
       if (!item) return;
+      window.GA?.popupToList(item, this.modeConfig._name);
       this.view = 'table';
       if (!this.expandedIds.includes(id)) this.expandedIds.push(id);
       nextTick(() => {
@@ -778,6 +886,16 @@ createApp({
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
       });
+    },
+
+    navigateToCase(idOrItem) {
+      const item = typeof idOrItem === 'object'
+        ? idOrItem
+        : (this.filteredData.find(i => i.id === idOrItem) || this.rawData.find(i => i.id === idOrItem));
+      if (!item || !item.lat || !item.lng) return;
+      window.GA?.navigate(item, this.modeConfig._name);
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}&travelmode=driving`;
+      window.open(url, '_blank');
     },
   },
 
