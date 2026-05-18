@@ -468,7 +468,7 @@
 //  Step 1: 讀 URL hash → 決定模式
 // ══════════════════════════════════════════
 const orgHashKey = window.location.hash.replace('#', '').split('?')[0].trim();
-const hashKey = encodeURIComponent(orgHashKey);
+const hashKey = btoa(orgHashKey);
 const modeName = SITE_CONFIG.KEYS[hashKey] || null;
 
 // 實際加密金鑰 = 反轉 hash + 私密 salt（兩者缺一不可）
@@ -907,7 +907,7 @@ createApp({
       const buf = await resp.arrayBuffer();
 
       // 解密（金鑰 = 反轉 hash + 私密 salt）
-      const allData = await decryptData(buf, buildCryptoKey(hashKey));
+      const allData = await decryptData(buf, buildCryptoKey(orgHashKey));
 
       // 套用模式資料過濾
       const df = modeConfig.dataFilter;
