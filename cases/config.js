@@ -37,9 +37,9 @@ const SITE_CONFIG = {
 
       // 資料過濾（額外的，ontop of 已售/停賣過濾）
       dataFilter: {
-        excludeDevNames: ['小楊類專'],  // 排除這些開發名
+        excludeDevNames: [],  // 排除這些開發名
         excludeTypes: [],               // 不排除任何類型
-        onlyDev: null,                  // null = 不限制開發
+        onlyDev: [],                  // null = 不限制開發
       },
 
       // 快速篩選 tag（顯示哪些）
@@ -58,6 +58,7 @@ const SITE_CONFIG = {
       // 側邊欄過濾器（顯示哪些）
       filters: {
         keyword:    true,
+        city:       true,
         area:       true,
         village:    true,   // 村里
         buildType:  true,
@@ -108,9 +109,9 @@ const SITE_CONFIG = {
       showMapIcon: true,   // 地圖跳轉保留
 
       dataFilter: {
-        excludeDevNames: ['小楊類專'],
+        excludeDevNames: ['小楊私件'],
         excludeTypes: [],
-        onlyDev: '小楊',    // 只顯示開發=小楊
+        onlyDev: ['小楊', '小楊類專'],    // 只顯示開發=小楊
       },
 
       quickTags: [
@@ -123,11 +124,12 @@ const SITE_CONFIG = {
 
       filters: {
         keyword:    true,
-        area:       true,
+        city:       true,
+        area:       false,
         village:    false,
         buildType:  true,
         rooms:      true,
-        direction:  false,
+        direction:  true,
         usage:      false,
         price:      true,
         unitPrice:  true,
@@ -172,7 +174,7 @@ const SITE_CONFIG = {
       dataFilter: {
         excludeDevNames: ['小楊類專', '配案'],
         excludeTypes: [],   // 客戶不看土地
-        onlyDev: null,
+        onlyDev: [],
       },
 
       quickTags: [
@@ -184,7 +186,8 @@ const SITE_CONFIG = {
 
       filters: {
         keyword:    true,
-        area:       true,
+        city:       true,
+        area:       false,
         village:    false,  // 客戶不需村里篩選
         buildType:  true,
         rooms:      true,
@@ -198,7 +201,7 @@ const SITE_CONFIG = {
 
       columns: {
         caseName:   true,
-        dev:        true,  // 客戶不看開發資訊
+        dev:        false,  // 客戶不看開發資訊
         area:       true,
         price:      true,
         unitPrice:  true,

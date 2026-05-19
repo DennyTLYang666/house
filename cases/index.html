@@ -8,9 +8,6 @@
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
-  <script data-goatcounter="https://realyang888.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
-  <script defer src="https://cloud.umami.is/script.js" data-website-id="b8e98626-0ef2-432d-a9e2-7b117b655f99"></script>
-
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-JMNR3VKQE4"></script>
   <script>
@@ -199,6 +196,16 @@
         </div>
       </div>
 
+      <!-- 縣市 -->
+      <div class="filter-section" v-if="modeConfig.filters.city">
+        <div class="filter-title">縣市</div>
+        <div class="checkbox-grid">
+          <label class="checkbox-item" v-for="city in cityOptions" :key="city">
+            <input type="checkbox" v-model="filters.citys" :value="city" />{{city}}
+          </label>
+        </div>
+      </div>
+
       <!-- 行政區 -->
       <div class="filter-section" v-if="modeConfig.filters.area">
         <div class="filter-title">行政區</div>
@@ -356,7 +363,7 @@
                 </div>
                 <!-- 開發資訊（staff/yang 模式才顯示） -->
                 <div v-if="modeConfig.columns.dev" style="font-size:11px;color:#999;margin-top:2px;">
-                  <span v-if="modeConfig.columns.dev">{{ item.開發 }}&nbsp;</span>
+                  <span v-if="modeConfig.columns.dev">{{ item.開發 }}&nbsp;{{ item.開發備註 }}</span>
                   <template v-if="modeConfig.showLinks">
                     <a :href="item.廣告" target="_blank" rel="noopener" v-if="item.廣告" style="font-size:12px;color:var(--accent);">
                       <i class="fa-brands fa-facebook"></i>
@@ -371,6 +378,7 @@
                 </div>
                 <!-- 非開發欄模式：只顯示地圖 icon（視 showMapIcon） -->
                 <div v-else-if="modeConfig.showMapIcon && item.lat && item.lng" style="font-size:11px;color:#999;margin-top:2px;">
+                  <span>{{ item.開發備註 }}</span>
                   <a @click="jumpToMap(item)" style="cursor:pointer;color:var(--accent)">
                     <i class="fa-solid fa-location-dot"></i> 查看地圖
                   </a>
@@ -547,6 +555,7 @@ createApp({
 
       filters: {
         keyword: '',
+        citys: [],
         areas: [],
         villages: [],
         rooms: [],
@@ -583,6 +592,9 @@ createApp({
       return n;
     },
 
+    cityOptions() {
+      return [...new Set(this.rawData.map(i => String(i.縣市 || '').trim()))].filter(Boolean).sort();
+    },
     areaOptions() {
       return [...new Set(this.rawData.map(i => String(i.分區 || '').trim()))].filter(Boolean).sort();
     },
@@ -613,6 +625,7 @@ createApp({
         if (this.filters.directions.length && !this.filters.directions.includes(item.座向)) return false;
         if (this.filters.usages.length   && !this.filters.usages.includes(item.使用分區)) return false;
         if (this.filters.quickKey && item[this.filters.quickKey] !== this.filters.quickValue) return false;
+        if (this.filters.citys.length    && !this.filters.citys.includes(item.縣市)) return false;
         if (this.filters.areas.length    && !this.filters.areas.includes(item.分區)) return false;
         if (this.filters.villages.length && !this.filters.villages.includes(item.村里)) return false;
         if (this.filters.buildTypes.length && !this.filters.buildTypes.includes(item.建物型態?.trim())) return false;
@@ -700,7 +713,7 @@ createApp({
     },
     resetFilters() {
       this.filters = {
-        keyword: '', areas: [], villages: [], rooms: [], directions: [],
+        keyword: '', citys: [], areas: [], villages: [], rooms: [], directions: [],
         usages: [], quickKey: '', quickValue: '', buildTypes: [],
         priceMin: null, priceMax: null, unitPriceMin: null, unitPriceMax: null,
         pingMin: null, pingMax: null, landMin: null, landMax: null,
@@ -915,7 +928,7 @@ createApp({
         if (item.已售 === true || item.停賣 === true) return false;
         if (df.excludeDevNames.includes(String(item.開發 || '').trim())) return false;
         if (df.excludeTypes.length && df.excludeTypes.includes(item.類型)) return false;
-        if (df.onlyDev && String(item.開發 || '').trim() !== df.onlyDev) return false;
+        if (df.onlyDev.length && !df.onlyDev.includes(item.開發)) return false;
         return true;
       }).map(i => ({ ...i, 建物型態: i.建物型態?.trim() }));
 
