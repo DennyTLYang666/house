@@ -32,8 +32,10 @@ const SITE_CONFIG = {
       dataFile: './staff.enc',
 
       // 列表顯示控制
-      showLinks:   true,   // 廣告(FB) / YouTube icon
-      showMapIcon: true,   // 列表裡的地圖跳轉 icon
+      showLinks:       true,   // 廣告(FB) / YouTube icon
+      showMapIcon:     true,   // 列表裡的地圖跳轉 icon
+      showFullAddress: true,   // true=顯示完整地址；false=僅顯示「位置」欄位或地段（隱藏門牌）
+      showPicture:     true,   // true=案名可點擊連至物件圖片頁；false=純文字案名
 
       // 資料過濾（額外的，ontop of 已售/停賣過濾）
       dataFilter: {
@@ -105,8 +107,10 @@ const SITE_CONFIG = {
       sidebarTitle: '🏠 小楊案件',
       dataFile: './yang.enc',
 
-      showLinks:   false,  // 不顯示廣告/YouTube
-      showMapIcon: true,   // 地圖跳轉保留
+      showLinks:       false,  // 不顯示廣告/YouTube
+      showMapIcon:     true,   // 地圖跳轉保留
+      showFullAddress: true,   // 小楊內部仍顯示完整地址
+      showPicture:     true,   // 顯示物件圖片連結
 
       dataFilter: {
         excludeDevNames: ['小楊私件'],
@@ -164,15 +168,17 @@ const SITE_CONFIG = {
 
     // ── 客戶版 ────────────────────
     client: {
-      title: '🏠 小楊房屋｜物件資訊',
+      title: '🏠 小楊屋玖壹｜物件資訊',
       sidebarTitle: '🏠 精選物件',
       dataFile: './client.enc',
 
-      showLinks:   false,  // 不顯示廣告/YouTube
-      showMapIcon: true,   // 地圖跳轉保留
+      showLinks:       false,  // 不顯示廣告/YouTube
+      showMapIcon:     true,   // 地圖跳轉保留
+      showFullAddress: false,  // 客戶版：隱藏完整門牌，僅顯示「位置」欄位或地段
+      showPicture:     false,  // 客戶版：不顯示物件圖片連結，僅純文字案名
 
       dataFilter: {
-        excludeDevNames: ['小楊類專', '配案'],
+        excludeDevNames: ['小楊類專', '小楊私件', '配案'],
         excludeTypes: [],   // 客戶不看土地
         onlyDev: [],
       },

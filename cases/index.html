@@ -341,7 +341,7 @@
         <thead>
           <tr>
             <th style="width:160px">案名</th>
-            <th style="width:80px">行政區</th>
+            <th style="width:80px">位置</th>
             <th style="width:80px">總價</th>
             <th style="width:70px">單價</th>
             <th style="width:80px">格局</th>
@@ -359,7 +359,8 @@
             <tr :data-id="item.id">
               <td>
                 <div>
-                  <a :href="`https://dennytlyang666.github.io/house/${item.id}`" target="_blank" class="title-link">{{ item.案名 }}</a>
+                  <a v-if="item.圖片" :href="`https://dennytlyang666.github.io/house/${item.id}`" target="_blank" class="title-link">{{ item.案名 }}</a>
+                  <span v-else>{{ item.案名 }}</span>
                 </div>
                 <!-- 開發資訊（staff/yang 模式才顯示） -->
                 <div v-if="modeConfig.columns.dev" style="font-size:11px;color:#999;margin-top:2px;">
@@ -386,7 +387,8 @@
               </td>
               <td style="font-size:12px">
                 {{ item.縣市 }} {{ modeConfig.filters.village ? (item.村里 || item.分區) : item.分區 }}<br>
-                <span style="color:#aaa">{{item.地址 || (item.地段 + item.地號)}}</span>
+                <span v-if="modeConfig.showFullAddress" style="color:#aaa">{{ item.地址 || (item.地段 + item.地號) }}</span>
+                <span v-else style="color:#aaa">{{ item.位置 || item.地段 }}</span>
               </td>
               <td class="price">{{ item.委託價 }}萬</td>
               <td class="price">{{ unitPrice(item) }}萬</td>
@@ -925,7 +927,7 @@ createApp({
       // 套用模式資料過濾
       const df = modeConfig.dataFilter;
       this.rawData = allData.filter(item => {
-        if (item.已售 === true || item.停賣 === true) return false;
+        if (item.狀態 === "停賣" || item.狀態 === "成交") return false;
         if (df.excludeDevNames.includes(String(item.開發 || '').trim())) return false;
         if (df.excludeTypes.length && df.excludeTypes.includes(item.類型)) return false;
         if (df.onlyDev.length && !df.onlyDev.includes(item.開發)) return false;
