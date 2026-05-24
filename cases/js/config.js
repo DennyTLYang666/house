@@ -29,7 +29,7 @@ const SITE_CONFIG = {
     staff: {
       title: '🏠 小楊屋玖壹｜內部系統',
       sidebarTitle: '🏠 小楊房屋委託',
-      dataFile: './staff.enc',
+      dataFile: './enc/staff.enc',
 
       // 列表顯示控制
       showLinks:       true,   // 廣告(FB) / YouTube icon
@@ -105,7 +105,7 @@ const SITE_CONFIG = {
     yang: {
       title: '🏠 小楊屋玖壹｜小楊案件',
       sidebarTitle: '🏠 小楊案件',
-      dataFile: './yang.enc',
+      dataFile: './enc/yang.enc',
 
       showLinks:       false,  // 不顯示廣告/YouTube
       showMapIcon:     true,   // 地圖跳轉保留
@@ -170,7 +170,7 @@ const SITE_CONFIG = {
     client: {
       title: '🏠 小楊屋玖壹｜物件資訊',
       sidebarTitle: '🏠 精選物件',
-      dataFile: './client.enc',
+      dataFile: './enc//client.enc',
 
       showLinks:       false,  // 不顯示廣告/YouTube
       showMapIcon:     true,   // 地圖跳轉保留
