@@ -359,8 +359,8 @@
             <tr :data-id="item.id">
               <td>
                 <div>
-                  <a v-if="item.圖片" :href="`https://dennytlyang666.github.io/house/${item.id}`" target="_blank" class="title-link">{{ item.案名 }}</a>
-                  <span v-else>{{ item.案名 }}</span>
+                  <a :href="`https://dennytlyang666.github.io/house/${item.id}`" target="_blank" class="title-link">{{ item.案名 }}</a>
+<!--                  <span v-else>{{ item.案名 }}</span>-->
                 </div>
                 <!-- 開發資訊（staff/yang 模式才顯示） -->
                 <div v-if="modeConfig.columns.dev" style="font-size:11px;color:#999;margin-top:2px;">
