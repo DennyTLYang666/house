@@ -505,3 +505,68 @@ tr:hover td { background: #fafcff; }
   .sidebar { width: 100%; min-width: unset; height: auto; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
   .map-legend { bottom: 50px; }
 }
+
+.locate-btn {
+  width: 34px;
+  height: 34px;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;   /* 跟 zoom 按鈕的間距 */
+  transition: background 0.2s;
+}
+.locate-btn:hover { background: #f4f4f4; }
+
+/* 定位中：旋轉動畫 */
+.locate-btn.locating {
+  animation: spin 1s linear infinite;
+  pointer-events: none;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* ── 定位按鈕（覆寫舊樣式） ── */
+.locate-btn {
+  position: absolute !important;
+  bottom: 80px !important;
+  right: 10px !important;
+  z-index: 1000 !important;
+  width: 34px !important;
+  height: 34px !important;
+  background: #fff !important;
+  border: 2px solid rgba(0,0,0,0.25) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: 0 1px 5px rgba(0,0,0,.25) !important;
+  transition: background 0.15s, box-shadow 0.15s !important;
+  color: #3366cc !important;
+  font-size: 0 !important;
+}
+.locate-btn:hover {
+  background: #f0f6ff !important;
+  box-shadow: 0 2px 8px rgba(51,102,204,.35) !important;
+}
+.locate-btn.located { color: #3b82f6 !important; }
+.locate-btn.locating {
+  pointer-events: none !important;
+}
+.locate-btn.locating svg {
+  animation: locate-spin 1s linear infinite;
+}
+@keyframes locate-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
