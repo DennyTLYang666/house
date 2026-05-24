@@ -533,7 +533,9 @@ tr:hover td { background: #fafcff; }
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-/* ── 定位按鈕（覆寫舊樣式） ── */
+/* ══════════════════════════════
+   定位按鈕
+══════════════════════════════ */
 .locate-btn {
   position: absolute !important;
   bottom: 80px !important;
@@ -551,22 +553,49 @@ tr:hover td { background: #fafcff; }
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: 0 1px 5px rgba(0,0,0,.25) !important;
-  transition: background 0.15s, box-shadow 0.15s !important;
   color: #3366cc !important;
-  font-size: 0 !important;
+  transition: background 0.15s !important;
 }
-.locate-btn:hover {
-  background: #f0f6ff !important;
-  box-shadow: 0 2px 8px rgba(51,102,204,.35) !important;
-}
+.locate-btn:hover { background: #f0f6ff !important; }
 .locate-btn.located { color: #3b82f6 !important; }
-.locate-btn.locating {
-  pointer-events: none !important;
-}
-.locate-btn.locating svg {
-  animation: locate-spin 1s linear infinite;
-}
+.locate-btn.locating { pointer-events: none !important; }
+.locate-btn.locating svg { animation: locate-spin 1s linear infinite; }
 @keyframes locate-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* ══════════════════════════════
+   圖層切換控制
+══════════════════════════════ */
+.leaflet-control-layers {
+  border-radius: 8px !important;
+  border: 1px solid rgba(0,0,0,0.2) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15) !important;
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif !important;
+}
+.leaflet-control-layers-toggle {
+  width: 34px !important;
+  height: 34px !important;
+}
+.leaflet-control-layers-expanded {
+  padding: 8px 12px !important;
+  min-width: 150px;
+  background: rgba(255,255,255,.97) !important;
+}
+.leaflet-control-layers-separator {
+  margin: 6px 0 !important;
+  border-top: 1px solid #e2e6ed !important;
+}
+.leaflet-control-layers label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #333 !important;
+  padding: 3px 0 !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+.leaflet-control-layers label:hover { color: #3366cc !important; }
+.leaflet-control-layers input { accent-color: #3366cc; cursor: pointer; }
