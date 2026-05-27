@@ -36,6 +36,7 @@ const SITE_CONFIG = {
       showMapIcon:     true,   // 列表裡的地圖跳轉 icon
       showFullAddress: true,   // true=顯示完整地址；false=僅顯示「位置」欄位或地段（隱藏門牌）
       showPicture:     true,   // true=案名可點擊連至物件圖片頁；false=純文字案名
+      grade:     true, // 案件等級
 
       // 資料過濾（額外的，ontop of 已售/停賣過濾）
       dataFilter: {
@@ -111,6 +112,7 @@ const SITE_CONFIG = {
       showMapIcon:     true,   // 地圖跳轉保留
       showFullAddress: true,   // 小楊內部仍顯示完整地址
       showPicture:     true,   // 顯示物件圖片連結
+      grade:     true, // 案件等級
 
       dataFilter: {
         excludeDevNames: ['小楊私件'],
@@ -176,6 +178,7 @@ const SITE_CONFIG = {
       showMapIcon:     true,   // 地圖跳轉保留
       showFullAddress: false,  // 客戶版：隱藏完整門牌，僅顯示「位置」欄位或地段
       showPicture:     false,  // 客戶版：不顯示物件圖片連結，僅純文字案名
+      grade:           false,  // 案件等級
 
       dataFilter: {
         excludeDevNames: ['小楊類專', '小楊私件', '配案'],

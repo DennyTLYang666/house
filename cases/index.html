@@ -325,6 +325,16 @@
                     <i class="fa-solid fa-location-dot"></i> 查看地圖
                   </a>
                 </div>
+
+                <!-- 在「查看地圖」的 </a> 後面接 -->
+                <template v-if="item.等級">
+                  <span v-if="item.等級 === 'A'" style="display:inline-flex;align-items:center;gap:2px">
+                    <span class="apple-dot"></span>
+                    <span class="grade-A-shine">Apple</span>
+                  </span>
+                  <span v-else-if="item.等級 === 'B'" style="font-size:13px">⭐ B</span>
+                  <span v-else-if="item.等級 === 'C'" style="font-size:13px">🔵 C</span>
+                </template>
               </td>
 
               <td style="font-size:12px">

@@ -56,3 +56,32 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 14px; color: #a0aec0; }
+
+.apple-dot {
+  display: inline-block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #7c3aed;
+  box-shadow: 0 0 5px 2px rgba(139,92,246,0.7);
+  animation: grade-pulse 2s ease-in-out infinite;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+@keyframes grade-pulse {
+  0%,100% { box-shadow: 0 0 4px 1px rgba(139,92,246,0.55); }
+  50%      { box-shadow: 0 0 9px 4px rgba(139,92,246,0.85); }
+}
+.grade-A-shine {
+  font-size: 11px; font-weight: 700;
+  background: linear-gradient(90deg, #a78bfa, #818cf8, #c4b5fd, #7c3aed, #a78bfa);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: grade-shine 2.5s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(139,92,246,0.6));
+}
+@keyframes grade-shine {
+  0%   { background-position: 0% center; }
+  100% { background-position: 250% center; }
+}
