@@ -47,6 +47,7 @@ const SITE_CONFIG = {
 
       // 快速篩選 tag（顯示哪些）
       quickTags: [
+        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '主攻',   value: '主攻',   key: '開發' },
         { label: '小楊',   value: '小楊',   key: '開發' },
         { label: '配案',   value: '配案',   key: '開發' },
@@ -121,6 +122,7 @@ const SITE_CONFIG = {
       },
 
       quickTags: [
+        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '土地',   value: '土地',   key: '類型' },
         { label: '房屋',   value: '房屋',   key: '類型' },
         { label: '低總價', value: '低總價', key: '價格區間' },
@@ -187,6 +189,7 @@ const SITE_CONFIG = {
       },
 
       quickTags: [
+        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '房屋',   value: '房屋',   key: '類型' },
         { label: '低總價', value: '低總價', key: '價格區間' },
         { label: '中價位', value: '中價位', key: '價格區間' },
