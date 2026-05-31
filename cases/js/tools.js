@@ -36,6 +36,8 @@
       { name: 'Google 地圖', url: 'https://maps.google.com/' },
       { name: '航照圖（國土）', url: 'https://maps.nlsc.gov.tw/' },
       { name: 'Google 街景', url: 'https://www.google.com/maps/@?api=1&map_action=pano' },
+      { name: '門牌位置', url: 'https://addressrs.moi.gov.tw/address/index.cfm' },
+      { name: '地址轉座標', url: 'https://map.tgos.tw/TGOSCloudMap?addr=' },
     ],
   };
 

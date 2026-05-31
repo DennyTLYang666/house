@@ -238,6 +238,8 @@ createApp({
         if (df.excludeDevNames.includes(String(item.開發 || '').trim())) return false;
         if (df.excludeTypes.length && df.excludeTypes.includes(item.類型)) return false;
         if (df.onlyDev.length && !df.onlyDev.includes(item.開發)) return false;
+
+        if (modeConfig._name === 'client' && !item.圖片) return false;
         return true;
       }).map(i => ({ ...i, 建物型態: i.建物型態?.trim() }));
 

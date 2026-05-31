@@ -220,7 +220,7 @@ const SITE_CONFIG = {
         layout:     true,
         totalPing:  true,
         mainPing:   true,
-        landPing:   false,  // 客戶不看地坪
+        landPing:   true,  // 客戶不看地坪
         usage:      false,  // 客戶不看使用分區
         buildType:  true,
         direction:  false,
