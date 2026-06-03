@@ -138,6 +138,11 @@ createApp({
       return data;
     },
 
+    totalPrice() {
+      if (!this.filteredData.length) return 0;
+      return Math.round(this.filteredData.reduce((s, i) => s + i.委託價, 0));
+    },
+
     averagePrice() {
       if (!this.filteredData.length) return 0;
       return Math.round(this.filteredData.reduce((s, i) => s + i.委託價, 0) / this.filteredData.length);
