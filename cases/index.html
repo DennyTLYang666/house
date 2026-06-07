@@ -240,7 +240,7 @@
     <div class="topbar">
       <div class="topbar-title">物件資料庫</div>
       <span class="summary-pill">
-        📦 {{ filteredData.length }} 筆｜均價 {{ averagePrice }} 萬｜中位 {{ medianPrice }} 萬｜總價 {{ totalPrice }} 萬
+        📦 {{ filteredData.length }} 筆｜均價 {{ averagePrice }} 萬｜中位 {{ medianPrice }} 萬｜總價 {{ totalPrice }} 萬｜最高業績 {{ maxPerformance }} 萬
       </span>
       <div class="topbar-right">
         <select class="sort-select" v-model="sortKey">
@@ -372,7 +372,13 @@
                       <div class="detail-item" v-if="item.面寬">📏 面寬：{{ item.面寬 }}</div>
                       <div class="detail-item" v-if="item.縱深">📐 縱深：{{ item.縱深 }}</div>
                       <div class="detail-item" v-if="item.臨路">🚗 臨路：{{ item.臨路 }}</div>
-                      <div class="detail-item" v-if="item.lat">🌐 座標：{{ item.lat.toFixed(4) }}, {{ item.lng.toFixed(4) }}</div>
+<!--                      <div class="detail-item" v-if="item.lat">🌐 座標：{{ item.lat.toFixed(4) }}, {{ item.lng.toFixed(4) }}</div>-->
+                      <div class="detail-item" v-if="item.戶數">🏘️ 戶數：{{ item.戶數 }}</div>
+                      <div class="detail-item" v-if="item.社區最高價">📈 社區最高價：{{ item.社區最高價 }}</div>
+                      <div class="detail-item" v-if="item.社區一年均價">💰 社區一年均價：{{ item.社區一年均價 }}</div>
+                      <div class="detail-item" v-if="item.建設公司">🏗️ 建設公司：{{ item.建設公司 }}</div>
+                      <div class="detail-item" v-if="item.營造公司">👷 營造公司：{{ item.營造公司 }}</div>
+                      <div class="detail-item" v-if="item.建築設計">📐 建築設計：{{ item.建築設計 }}</div>
                     </div>
 
                     <!-- 物件特色 -->
