@@ -96,6 +96,8 @@
         }
         if (f.pingMin !== null && item.總坪數    < f.pingMin) return false;
         if (f.pingMax !== null && item.總坪數    > f.pingMax) return false;
+        if (f.interiorPingMin !== null && item.室內坪數    < f.interiorPingMin) return false;
+        if (f.interiorPingMax !== null && item.室內坪數    > f.interiorPingMax) return false;
         if (f.landMin !== null && item.土地坪數  < f.landMin) return false;
         if (f.landMax !== null && item.土地坪數  > f.landMax) return false;
         return true;

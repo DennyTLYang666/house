@@ -41,6 +41,9 @@
       { name: '門牌位置', url: 'https://addressrs.moi.gov.tw/address/index.cfm' },
       { name: '地址轉座標', url: 'https://map.tgos.tw/TGOSCloudMap?addr=' },
     ],
+    租屋: [
+      { name: '內政部租金查詢系統', url: 'https://moisagis.moi.gov.tw/rent/' },
+    ],
   };
 
   const STORAGE_KEY = 'yang_tools_data';

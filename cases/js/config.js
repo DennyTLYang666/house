@@ -72,6 +72,7 @@ const SITE_CONFIG = {
         price:      true,
         unitPrice:  true,
         ping:       true,
+        interiorPing:       true,
         land:       true,
       },
 

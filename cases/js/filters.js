@@ -34,6 +34,8 @@
       unitPriceMax: null,
       pingMin:      null,
       pingMax:      null,
+      interiorPingMin:      null,
+      interiorPingMax:      null,
       landMin:      null,
       landMax:      null,
     },
@@ -60,6 +62,7 @@
         priceMin: null, priceMax: null,
         unitPriceMin: null, unitPriceMax: null,
         pingMin: null, pingMax: null,
+        interiorPingMin: null, interiorPingMax: null,
         landMin: null, landMax: null,
       };
     },

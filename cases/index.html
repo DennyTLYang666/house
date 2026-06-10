@@ -123,6 +123,34 @@
         </div>
       </div>
 
+      <!-- 特殊篩選（staff only，有資料才顯示） -->
+      <div class="filter-section"
+           v-if="modeConfig._name === 'staff' && (expiringSoonCount > 0 || soldData.length > 0)">
+        <div class="filter-title">特殊篩選</div>
+        <div class="special-filter-group">
+          <div
+            v-if="expiringSoonCount > 0"
+            class="special-filter-btn"
+            :class="{ active: specialFilter === 'expiring', 'expire-active': specialFilter === 'expiring' }"
+            @click="setSpecialFilter('expiring')"
+          >
+            <span class="sf-dot sf-dot-orange"></span>
+            <span class="sf-label">即將到期</span>
+            <span class="sf-count">{{ expiringSoonCount }}</span>
+          </div>
+          <div
+            v-if="soldData.length > 0"
+            class="special-filter-btn"
+            :class="{ active: specialFilter === 'sold', 'sold-active': specialFilter === 'sold' }"
+            @click="setSpecialFilter('sold')"
+          >
+            <span class="sf-dot sf-dot-gray"></span>
+            <span class="sf-label">已售物件</span>
+            <span class="sf-count">{{ soldData.length }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 縣市 -->
       <div class="filter-section" v-if="modeConfig.filters.city">
         <div class="filter-title">縣市</div>
@@ -194,39 +222,53 @@
       </div>
 
       <!-- 總價 -->
-      <div class="filter-section" v-if="modeConfig.filters.price">
-        <div class="filter-title">總價（萬）</div>
-        <div class="range-row">
-          <input class="range-input" v-model.number="filters.priceMin" placeholder="最低" type="number" />
-          <input class="range-input" v-model.number="filters.priceMax" placeholder="最高" type="number" />
-        </div>
+      <div class="filter-group" v-if="modeConfig.filters.price">
+          <label class="filter-label">總價（萬）</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model="filters.priceMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model="filters.priceMax" />
+          </div>
       </div>
 
       <!-- 單價 -->
-      <div class="filter-section" v-if="modeConfig.filters.unitPrice">
-        <div class="filter-title">單價（萬/坪）</div>
-        <div class="range-row">
-          <input class="range-input" v-model.number="filters.unitPriceMin" placeholder="最低" type="number" />
-          <input class="range-input" v-model.number="filters.unitPriceMax" placeholder="最高" type="number" />
-        </div>
+      <div class="filter-group" v-if="modeConfig.filters.unitPrice">
+          <label class="filter-label">單價（萬/坪）</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.unitPriceMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.unitPriceMax" />
+          </div>
       </div>
 
       <!-- 總坪數 -->
-      <div class="filter-section" v-if="modeConfig.filters.ping">
-        <div class="filter-title">總坪數</div>
-        <div class="range-row">
-          <input class="range-input" v-model.number="filters.pingMin" placeholder="最低" type="number" />
-          <input class="range-input" v-model.number="filters.pingMax" placeholder="最高" type="number" />
-        </div>
+      <div class="filter-group" v-if="modeConfig.filters.ping">
+          <label class="filter-label">總坪數</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model="filters.pingMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model="filters.pingMax" />
+          </div>
+      </div>
+
+      <!-- 室內坪數 -->
+      <div class="filter-group" v-if="modeConfig.filters.interiorPing">
+          <label class="filter-label">室內坪數</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model="filters.interiorPingMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model="filters.interiorPingMax" />
+          </div>
       </div>
 
       <!-- 土地坪數 -->
-      <div class="filter-section" v-if="modeConfig.filters.land">
-        <div class="filter-title">土地坪數</div>
-        <div class="range-row">
-          <input class="range-input" v-model.number="filters.landMin" placeholder="最小" type="number" />
-          <input class="range-input" v-model.number="filters.landMax" placeholder="最大" type="number" />
-        </div>
+      <div class="filter-group" v-if="modeConfig.filters.land">
+          <label class="filter-label">土地坪數</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.landMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.landMax" />
+          </div>
       </div>
 
       <button class="reset-btn" @click="resetFilters">清除篩選</button>
@@ -270,11 +312,11 @@
           <tr>
             <th style="width:160px">案名</th>
             <th style="width:80px">位置</th>
+            <th v-if="modeConfig._name === 'staff'" style="width:90px">委託</th>
             <th style="width:80px">總價</th>
             <th style="width:70px">單價</th>
             <th style="width:80px">格局</th>
-            <th style="width:60px">總建坪</th>
-            <th style="width:60px">主建物</th>
+            <th style="width:120px">建物</th>
             <th v-if="modeConfig.columns.landPing"  style="width:60px">地坪</th>
             <th v-if="modeConfig.columns.usage"     style="width:70px">使用分區</th>
             <th style="width:70px">建物型態</th>
@@ -286,7 +328,11 @@
           <template v-for="item in filteredData" :key="item.id">
 
             <!-- 資料列 -->
-            <tr :data-id="item.id">
+            <tr :data-id="item.id"
+                :class="{
+                  'row-expiring': specialFilter !== 'expiring' && specialFilter !== 'sold' && contractStatus(item) && contractStatus(item).cls !== 'contract-ok',
+                  'row-sold': specialFilter === 'sold'
+                }">
               <td>
                 <div>
                   <a
@@ -342,13 +388,40 @@
                 <span v-if="modeConfig.showFullAddress" style="color:#aaa">{{ item.地址 || (item.地段 + item.地號) }}</span>
                 <span v-else style="color:#aaa">{{ item.位置 || item.地段 }}</span>
               </td>
+
+              <!-- 委託日期欄（staff only） -->
+              <td v-if="modeConfig._name === 'staff'" style="font-size:11px;white-space:nowrap">
+                <template v-if="specialFilter === 'sold'">
+                  <span class="contract-badge contract-sold">成交</span>
+                </template>
+                <template v-else-if="item.委託末">
+                  <div style="color:#999">{{ item.委託末 }}</div>
+                  <div v-if="contractStatus(item)" :class="'contract-badge ' + contractStatus(item).cls">
+                    {{ contractStatus(item).label }}
+                  </div>
+                </template>
+                <span v-else style="color:#ccc">—</span>
+              </td>
+
               <td class="price">{{ item.委託價 }}萬</td>
-              <td class="price">{{ unitPrice(item) }}萬</td>
+              <td class="price">
+                  <div>{{ unitPrice(item) }}萬</div>
+<!--                  <div>{{ Number(item.委託價 / item.建物坪數).toFixed(2) }}萬</div>-->
+              </td>
               <td>{{ item.格局 }}</td>
-              <td>{{ item.總坪數 || '-' }}</td>
-              <td>{{ item.主建物 || '-' }}</td>
+              <td>
+                  <div v-if="item.總坪數">
+                      <div>總共 {{ Number(item.總坪數).toFixed(2) }}</div>
+                      <div>建物 {{ Number(item.建物坪數).toFixed(2) }}</div>
+                      <div>室內 {{ Number(item.室內坪數).toFixed(2) }}</div>
+                      <div>主建 {{ Number(item.主建物).toFixed(2) }}</div>
+                  </div>
+              </td>
               <td v-if="modeConfig.columns.landPing">{{ item.土地坪數 || '-' }}</td>
-              <td v-if="modeConfig.columns.usage">{{ item.使用分區 || '-' }}</td>
+              <td v-if="modeConfig.columns.usage">
+                  <div>{{ item.使用分區 || '-' }}</div>
+                  <div>{{ item.主要用途 || '-' }}</div>
+              </td>
               <td>{{ item.建物型態 }}</td>
               <td v-if="modeConfig.columns.direction">{{ item.座向 || '-' }}</td>
               <td>
@@ -364,43 +437,127 @@
                 <div class="detail-box">
                   <div class="detail-grid">
 
-                    <!-- 基本資訊（staff / yang 才顯示） -->
-                    <div class="detail-card" v-if="modeConfig.detailCards.basicInfo">
-                      <div class="detail-title">基本資訊</div>
-                      <div class="detail-item">📍 地段：{{ item.地段 }}</div>
-                      <div class="detail-item">🧾 地號：{{ item.地號 }}</div>
-                      <div class="detail-item" v-if="item.面寬">📏 面寬：{{ item.面寬 }}</div>
-                      <div class="detail-item" v-if="item.縱深">📐 縱深：{{ item.縱深 }}</div>
-                      <div class="detail-item" v-if="item.臨路">🚗 臨路：{{ item.臨路 }}</div>
-<!--                      <div class="detail-item" v-if="item.lat">🌐 座標：{{ item.lat.toFixed(4) }}, {{ item.lng.toFixed(4) }}</div>-->
-                      <div class="detail-item" v-if="item.戶數">🏘️ 戶數：{{ item.戶數 }}</div>
-                      <div class="detail-item" v-if="item.社區最高價">📈 社區最高價：{{ item.社區最高價 }}</div>
-                      <div class="detail-item" v-if="item.社區一年均價">💰 社區一年均價：{{ item.社區一年均價 }}</div>
-                      <div class="detail-item" v-if="item.建設公司">🏗️ 建設公司：{{ item.建設公司 }}</div>
-                      <div class="detail-item" v-if="item.營造公司">👷 營造公司：{{ item.營造公司 }}</div>
-                      <div class="detail-item" v-if="item.建築設計">📐 建築設計：{{ item.建築設計 }}</div>
+                    <!-- ① 物件資訊（所有模式） -->
+                    <div class="detail-card">
+                      <div class="detail-title">🏠 物件資訊</div>
+                      <div class="detail-row-2">
+                        <div class="detail-item" v-if="item.建物型態">🏢 型態：{{ item.建物型態 }}</div>
+                        <div class="detail-item" v-if="item.建物用途">🔑 用途：{{ item.建物用途 }}</div>
+                        <div class="detail-item" v-if="item.格局">🛏 格局：{{ item.格局 }}</div>
+                        <div class="detail-item" v-if="item.屋齡">🕰 屋齡：{{ item.屋齡 }}</div>
+                        <div class="detail-item" v-if="item.座向">🧭 座向：{{ item.座向 }}</div>
+                        <div class="detail-item" v-if="item.樓層">🏗 樓層：{{ item.樓層 }}F / {{ item.總樓層 }}F</div>
+                      </div>
+                      <div class="detail-divider" v-if="item.總坪數 || item.主建物 || item.附屬建物 || item.共有 || item.土地坪數 || item.車位坪數"></div>
+                      <div class="detail-row-3" v-if="item.總坪數 || item.主建物 || item.附屬建物 || item.共有 || item.土地坪數 || item.車位坪數">
+                        <div class="detail-stat" v-if="item.總坪數"><div class="ds-val">{{ item.總坪數 }}</div><div class="ds-lbl">總坪數</div></div>
+                        <div class="detail-stat" v-if="item.主建物"><div class="ds-val">{{ item.主建物 }}</div><div class="ds-lbl">主建物</div></div>
+                        <div class="detail-stat" v-if="item.附屬建物"><div class="ds-val">{{ item.附屬建物 }}</div><div class="ds-lbl">附屬</div></div>
+                        <div class="detail-stat" v-if="item.共有"><div class="ds-val">{{ item.共有 }}</div><div class="ds-lbl">共有</div></div>
+                        <div class="detail-stat" v-if="item.土地坪數"><div class="ds-val">{{ item.土地坪數 }}</div><div class="ds-lbl">地坪</div></div>
+                        <div class="detail-stat" v-if="item.車位坪數"><div class="ds-val">{{ item.車位坪數 }}</div><div class="ds-lbl">車位坪</div></div>
+                        <div class="detail-stat" v-if="item.車位數量"><div class="ds-val">{{ item.車位數量 }}</div><div class="ds-lbl">車位數</div></div>
+                      </div>
+                      <!-- 委託資訊 -->
+                      <div class="detail-divider" v-if="item.委託起 || item.委託末"></div>
+                      <div class="detail-row-2" v-if="item.委託起 || item.委託末">
+                        <div class="detail-item" v-if="item.委託起">📅 委託起：{{ item.委託起 }}</div>
+                        <div class="detail-item" v-if="item.委託末">
+                          📅 委託末：{{ item.委託末 }}
+                          <span v-if="contractStatus(item)" :class="'contract-badge ' + contractStatus(item).cls" style="margin-left:4px">{{ contractStatus(item).label }}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- 物件特色 -->
-                    <div class="detail-card" v-if="modeConfig.detailCards.feature && item.簡短特色">
-                      <div class="detail-title">物件特色</div>
-                      <ul class="feature-list">
+                    <!-- ② 社區資訊（staff / yang，且有社區欄位時） -->
+                    <div class="detail-card"
+                         v-if="modeConfig.detailCards.basicInfo && (item.戶數 || item.社區最高價 || item.社區一年均價 || item.建設公司 || item.營造公司 || item.建築設計)">
+                      <div class="detail-title">🏘 社區資訊</div>
+                      <div class="detail-row-2">
+                        <div class="detail-item" v-if="item.戶數">🏠 戶數：{{ item.戶數 }}</div>
+                        <div class="detail-item" v-if="item.建設公司">🏗 建設：{{ item.建設公司 }}</div>
+                        <div class="detail-item" v-if="item.營造公司">👷 營造：{{ item.營造公司 }}</div>
+                        <div class="detail-item" v-if="item.建築設計">📐 設計：{{ item.建築設計 }}</div>
+                      </div>
+                      <div class="detail-divider" v-if="item.社區最高價 || item.社區一年均價"></div>
+                      <div class="detail-row-2" v-if="item.社區最高價 || item.社區一年均價">
+                        <div class="detail-item" v-if="item.社區最高價">📈 社區最高：{{ item.社區最高價 }}</div>
+                        <div class="detail-item" v-if="item.社區一年均價">💰 近一年均：{{ item.社區一年均價 }}</div>
+                      </div>
+                    </div>
+
+                    <!-- ③ 地籍資訊（staff / yang） -->
+                    <div class="detail-card"
+                         v-if="modeConfig.detailCards.basicInfo && (item.地段 || item.地號 || item.面寬 || item.縱深 || item.臨路 || item.土地類型 || item.使用分區)">
+                      <div class="detail-title">📋 地籍資訊</div>
+                      <div class="detail-row-2">
+                        <div class="detail-item" v-if="item.地段">📍 地段：{{ item.地段 }}</div>
+                        <div class="detail-item" v-if="item.地號">🧾 地號：{{ item.地號 }}</div>
+                        <div class="detail-item" v-if="item.土地類型">🌐 土地：{{ item.土地類型 }}</div>
+                        <div class="detail-item" v-if="item.使用分區">🗺 分區：{{ item.使用分區 }}</div>
+                        <div class="detail-item" v-if="item.主要用途">🔑 主用途：{{ item.主要用途 }}</div>
+                        <div class="detail-item" v-if="item.面寬">📏 面寬：{{ item.面寬 }}</div>
+                        <div class="detail-item" v-if="item.縱深">📐 縱深：{{ item.縱深 }}</div>
+                        <div class="detail-item" v-if="item.臨路">🚗 臨路：{{ item.臨路 }}</div>
+                      </div>
+                      <div class="detail-divider" v-if="item.基地條件"></div>
+                      <div class="detail-item detail-prose" v-if="item.基地條件">{{ item.基地條件 }}</div>
+                    </div>
+
+                    <!-- ④ 帶看資訊（staff / yang，有帶看方法時） -->
+                    <div class="detail-card"
+                         v-if="modeConfig.detailCards.basicInfo && item.帶看方法 && Object.keys(item.帶看方法).length">
+                      <div class="detail-title">🗝 帶看資訊</div>
+                      <div class="detail-row-2">
+                        <div class="detail-item" v-for="(val, key) in item.帶看方法" :key="key">
+                          {{ key }}：{{ val }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- ⑤ 物件特色 -->
+                    <div class="detail-card detail-card-wide" v-if="modeConfig.detailCards.feature && item.簡短特色">
+                      <div class="detail-title">✨ 物件特色</div>
+                      <ul class="feature-list feature-list-2col">
                         <li v-for="f in item.簡短特色" :key="f">{{ f }}</li>
                       </ul>
                     </div>
 
-                    <!-- 學區 / 市場 / 公園 -->
-                    <div class="detail-card" v-if="modeConfig.detailCards.school">
-                      <div class="detail-title">學區 / 市場 / 公園</div>
-                      <div class="detail-item" v-if="item.學區">🎓 {{ item.學區.join('、') }}</div>
-                      <div class="detail-item" v-if="item.市場 && item.市場.length">🛒 {{ item.市場.join('、') }}</div>
-                      <div class="detail-item" v-if="item.公園">🌳 {{ item.公園.join('、') }}</div>
+                    <!-- ⑥ 周邊生活圈（學區 / 市場 / 公園 / 機能） -->
+                    <div class="detail-card"
+                         v-if="modeConfig.detailCards.school && (
+                           (item.學區 && item.學區.length) ||
+                           (item.市場 && item.市場.length) ||
+                           (item.公園 && item.公園.length)
+                         )">
+                      <div class="detail-title">🏫 周邊生活圈</div>
+
+                      <div class="detail-sub-section" v-if="item.學區 && item.學區.length">
+                        <div class="detail-sub-title">🎓 學區</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-school" v-for="s in item.學區" :key="s">{{ s }}</span>
+                        </div>
+                      </div>
+
+                      <div class="detail-sub-section" v-if="item.市場 && item.市場.length">
+                        <div class="detail-sub-title">🛒 購物</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-market" v-for="m in item.市場" :key="m">{{ m }}</span>
+                        </div>
+                      </div>
+
+                      <div class="detail-sub-section" v-if="item.公園 && item.公園.length">
+                        <div class="detail-sub-title">🌳 公園</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-park" v-for="p in item.公園" :key="p">{{ p }}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- 生活機能 -->
-                    <div class="detail-card" v-if="modeConfig.detailCards.amenity && item.機能">
-                      <div class="detail-title">生活機能</div>
-                      <ul class="feature-list">
+                    <!-- ⑦ 生活機能（詳細條列） -->
+                    <div class="detail-card detail-card-wide" v-if="modeConfig.detailCards.amenity && item.機能 && item.機能.length">
+                      <div class="detail-title">🏙 生活機能</div>
+                      <ul class="feature-list feature-list-2col">
                         <li v-for="m in item.機能" :key="m">{{ m }}</li>
                       </ul>
                     </div>
@@ -411,6 +568,7 @@
             </tr>
 
           </template>
+
         </tbody>
       </table>
     </div>
