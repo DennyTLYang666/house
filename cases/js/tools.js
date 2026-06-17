@@ -23,6 +23,8 @@
       { name: '地號查詢系統', url: 'https://www.land.moi.gov.tw/chhtml/landquery.asp' },
       { name: '新舊地建號查詢', url: 'https://www.land.tycg.gov.tw/chaspx/SQry4.aspx/14' },
       { name: '土地段名代碼暨詮釋資料查詢系統', url: 'https://lisp.land.moi.gov.tw/MMS/MMSpage.aspx#gobox01' },
+      { name: '桃園市政府都市計畫', url: 'https://urplanning.tycg.gov.tw/gisMap/Map.aspx' },
+      { name: '桃園市政府土地使用分區線上查詢', url: 'https://landuse.tycg.gov.tw/Sys/QueryLandUse/QueryLandUse.aspx' },
     ],
     估價稅務: [
       { name: '實價登錄查詢', url: 'https://lvr.land.moi.gov.tw' },
