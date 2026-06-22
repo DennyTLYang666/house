@@ -71,8 +71,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- 本系統樣式 -->
-  <link rel="stylesheet" href="style/app.css" />   <!-- 鎖定畫面 / loading -->
-  <link rel="stylesheet" href="style/map.css" />   <!-- 地圖、元件樣式（原有）-->
+  <link rel="stylesheet" href="style/app.css?v=2" />   <!-- 鎖定畫面 / loading -->
+  <link rel="stylesheet" href="style/map.css?v=2" />   <!-- 地圖、元件樣式（原有）-->
 </head>
 <body>
 
@@ -101,9 +101,12 @@
 <div id="app" style="display:none">
 
   <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
     <div class="sidebar-header">
-      <h2 id="sidebarTitle">🏠 小楊房屋</h2>
+      <div class="sidebar-header-row">
+        <h2 id="sidebarTitle">🏠 小楊房屋</h2>
+        <button class="sidebar-close-btn" @click="sidebarOpen = false" aria-label="關閉篩選">✕</button>
+      </div>
       <input class="search-input" v-model="filters.keyword" placeholder="搜尋案名 / 區域 / 地段…" />
     </div>
 
@@ -271,18 +274,40 @@
           </div>
       </div>
 
+      <!-- 車位數量 -->
+      <div class="filter-group" v-if="modeConfig.filters.parking">
+          <label class="filter-label">車位數量</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.parkingMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.parkingMax" />
+          </div>
+      </div>
+
       <button class="reset-btn" @click="resetFilters">清除篩選</button>
     </div>
   </aside>
+
+  <div class="sidebar-overlay" :class="{ show: sidebarOpen }" @click="sidebarOpen = false"></div>
 
   <!-- ── MAIN ── -->
   <main class="main">
 
     <!-- Topbar -->
     <div class="topbar">
+      <button class="filter-toggle-btn" @click="sidebarOpen = true">
+        🔍 篩選
+        <span class="filter-toggle-badge" v-if="filteredData.length !== rawData.length">{{ filteredData.length }}</span>
+      </button>
       <div class="topbar-title">物件資料庫</div>
       <span class="summary-pill">
-        📦 {{ filteredData.length }} 筆｜均價 {{ averagePrice }} 萬｜中位 {{ medianPrice }} 萬｜總價 {{ totalPrice }} 萬｜最高業績 {{ maxPerformance }} 萬
+        📦 {{ filteredData.length }} 筆｜
+        均價 {{ averagePrice }} 萬｜
+        中位 {{ medianPrice }} 萬
+        <template v-if="modeConfig.showSummaryDetail">
+          ｜總價 {{ totalPrice }} 萬
+          ｜最高業績 {{ maxPerformance }} 萬
+        </template>
       </span>
       <div class="topbar-right">
         <select class="sort-select" v-model="sortKey">
@@ -345,8 +370,8 @@
                 </div>
 
                 <!-- 開發資訊（staff / yang 模式） -->
-                <div v-if="modeConfig.columns.dev" style="font-size:11px;color:#999;margin-top:2px;">
-                  <span>{{ item.開發 }}&nbsp;{{ item.開發備註 }}</span>
+                <div style="font-size:11px;color:#999;margin-top:2px;">
+                  <span v-if="modeConfig.columns.dev" >{{ item.開發 }}&nbsp;{{ item.開發備註 }}</span>
                   <template v-if="modeConfig.showLinks">
                     <a :href="item.廣告" target="_blank" rel="noopener"
                        v-if="item.廣告" style="font-size:12px;color:var(--accent);">
@@ -360,15 +385,6 @@
                   <a v-if="modeConfig.showMapIcon && item.lat && item.lng"
                      @click="jumpToMap(item)" style="cursor:pointer">
                     <i class="fa-solid fa-location-dot"></i>
-                  </a>
-                </div>
-
-                <!-- 非開發欄模式：只顯示地圖 icon -->
-                <div v-else-if="modeConfig.showMapIcon && item.lat && item.lng"
-                     style="font-size:11px;color:#999;margin-top:2px;">
-                  <span>{{ item.開發備註 }}</span>
-                  <a @click="jumpToMap(item)" style="cursor:pointer;color:var(--accent)">
-                    <i class="fa-solid fa-location-dot"></i> 查看地圖
                   </a>
                 </div>
 
@@ -408,7 +424,10 @@
                   <div>{{ unitPrice(item) }}萬</div>
 <!--                  <div>{{ Number(item.委託價 / item.建物坪數).toFixed(2) }}萬</div>-->
               </td>
-              <td>{{ item.格局 }}</td>
+              <td>
+                  <div>{{ item.格局 }}</div>
+                  <div v-if="parkingLabel(item)" style="font-size:11px;color:#888">{{ parkingLabel(item) }}</div>
+              </td>
               <td>
                   <div v-if="item.總坪數">
                       <div>總共 {{ Number(item.總坪數).toFixed(2) }}</div>
@@ -443,7 +462,7 @@
                       <div class="detail-row-2">
                         <div class="detail-item" v-if="item.建物型態">🏢 型態：{{ item.建物型態 }}</div>
                         <div class="detail-item" v-if="item.建物用途">🔑 用途：{{ item.建物用途 }}</div>
-                        <div class="detail-item" v-if="item.格局">🛏 格局：{{ item.格局 }}</div>
+                        <div class="detail-item" v-if="item.格局">🛏 格局：{{ item.格局 }}{{ parkingLabel(item) ? '｜' + parkingLabel(item) : '' }}</div>
                         <div class="detail-item" v-if="item.屋齡">🕰 屋齡：{{ item.屋齡 }}</div>
                         <div class="detail-item" v-if="item.座向">🧭 座向：{{ item.座向 }}</div>
                         <div class="detail-item" v-if="item.樓層">🏗 樓層：{{ item.樓層 }}F / {{ item.總樓層 }}F</div>
@@ -458,15 +477,19 @@
                         <div class="detail-stat" v-if="item.車位坪數"><div class="ds-val">{{ item.車位坪數 }}</div><div class="ds-lbl">車位坪</div></div>
                         <div class="detail-stat" v-if="item.車位數量"><div class="ds-val">{{ item.車位數量 }}</div><div class="ds-lbl">車位數</div></div>
                       </div>
+
                       <!-- 委託資訊 -->
-                      <div class="detail-divider" v-if="item.委託起 || item.委託末"></div>
-                      <div class="detail-row-2" v-if="item.委託起 || item.委託末">
-                        <div class="detail-item" v-if="item.委託起">📅 委託起：{{ item.委託起 }}</div>
-                        <div class="detail-item" v-if="item.委託末">
-                          📅 委託末：{{ item.委託末 }}
-                          <span v-if="contractStatus(item)" :class="'contract-badge ' + contractStatus(item).cls" style="margin-left:4px">{{ contractStatus(item).label }}</span>
+                      <div v-if="modeConfig.detailCards.entrust">
+                        <div class="detail-divider" v-if="item.委託起 || item.委託末"></div>
+                        <div class="detail-row-2" v-if="item.委託起 || item.委託末">
+                          <div class="detail-item" v-if="item.委託起">📅 委託起：{{ item.委託起 }}</div>
+                          <div class="detail-item" v-if="item.委託末">
+                            📅 委託末：{{ item.委託末 }}
+                            <span v-if="contractStatus(item)" :class="'contract-badge ' + contractStatus(item).cls" style="margin-left:4px">{{ contractStatus(item).label }}</span>
+                          </div>
                         </div>
                       </div>
+
                     </div>
 
                     <!-- ② 社區資訊（staff / yang，且有社區欄位時） -->
@@ -515,14 +538,6 @@
                       </div>
                     </div>
 
-                    <!-- ⑤ 物件特色 -->
-                    <div class="detail-card detail-card-wide" v-if="modeConfig.detailCards.feature && item.簡短特色">
-                      <div class="detail-title">✨ 物件特色</div>
-                      <ul class="feature-list feature-list-2col">
-                        <li v-for="f in item.簡短特色" :key="f">{{ f }}</li>
-                      </ul>
-                    </div>
-
                     <!-- ⑥ 周邊生活圈（學區 / 市場 / 公園 / 機能） -->
                     <div class="detail-card"
                          v-if="modeConfig.detailCards.school && (
@@ -554,8 +569,18 @@
                       </div>
                     </div>
 
+                      <!-- ⑤ 物件特色 -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.feature">
+                      <div v-if="item.簡短特色">
+                          <div class="detail-title">✨ 物件特色</div>
+                          <ul class="feature-list feature-list-2col">
+                              <li v-for="f in item.簡短特色" :key="f">{{ f }}</li>
+                          </ul>
+                      </div>
+                    </div>
+
                     <!-- ⑦ 生活機能（詳細條列） -->
-                    <div class="detail-card detail-card-wide" v-if="modeConfig.detailCards.amenity && item.機能 && item.機能.length">
+                    <div class="detail-card" v-if="modeConfig.detailCards.amenity && item.機能 && item.機能.length">
                       <div class="detail-title">🏙 生活機能</div>
                       <ul class="feature-list feature-list-2col">
                         <li v-for="m in item.機能" :key="m">{{ m }}</li>
@@ -598,7 +623,9 @@
 <script src="./js/config.js"></script>    <!-- SITE_CONFIG -->
 <script src="./js/app-init.js"></script>  <!-- hash 驗證 / 解密函式 / GA init -->
 <script src="./js/app-map.js"></script>   <!-- MapMethods 物件 -->
-<script src="./js/app-vue.js"></script>   <!-- Vue createApp -->
+<script src="./js/data.js"></script>      <!-- YangData：資料載入 / 篩選 / 統計 -->
+<script src="./js/filters.js"></script>   <!-- YangFilters：filters 狀態 / 快速篩選 / 清除 -->
+<script src="./js/app-vue.js"></script>   <!-- Vue createApp：組合以上模組 -->
 <script src="./js/tools.js"></script>     <!-- Staff 工具連結面板（自動在 staff 模式掛載） -->
 
 </body>

@@ -18,6 +18,7 @@ const SITE_CONFIG = {
     'c3RhZmYyMDI2':  'staff',
     'eWFuZzY2Ng==':   'yang',
     'Y2xpZW50ODg4': 'client',
+    'Ym9zczc3Nw==': 'boss',
   },
 
   // ══════════════════════════════
@@ -36,6 +37,7 @@ const SITE_CONFIG = {
       showMapIcon:     true,   // 列表裡的地圖跳轉 icon
       showFullAddress: true,   // true=顯示完整地址；false=僅顯示「位置」欄位或地段（隱藏門牌）
       showPicture:     true,   // true=案名可點擊連至物件圖片頁；false=純文字案名
+      showSummaryDetail:   true,
       grade:     true, // 案件等級
 
       // 資料過濾（額外的，ontop of 已售/停賣過濾）
@@ -47,7 +49,7 @@ const SITE_CONFIG = {
 
       // 快速篩選 tag（顯示哪些）
       quickTags: [
-        { label: '🔮 A案', value: 'A', key: '等級' },
+//        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '主攻',   value: '主攻',   key: '開發' },
         { label: '小楊',   value: '小楊',   key: '開發' },
         { label: '配案',   value: '配案',   key: '開發' },
@@ -74,6 +76,7 @@ const SITE_CONFIG = {
         ping:       true,
         interiorPing:       true,
         land:       true,
+        parking:    true,
       },
 
       // 表格欄位
@@ -98,6 +101,7 @@ const SITE_CONFIG = {
         feature:    true,
         school:     true,
         amenity:    true,
+        entrust:    true,
       },
 
       // 地圖 popup 顯示
@@ -123,7 +127,7 @@ const SITE_CONFIG = {
       },
 
       quickTags: [
-        { label: '🔮 A案', value: 'A', key: '等級' },
+//        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '土地',   value: '土地',   key: '類型' },
         { label: '房屋',   value: '房屋',   key: '類型' },
         { label: '低總價', value: '低總價', key: '價格區間' },
@@ -144,6 +148,7 @@ const SITE_CONFIG = {
         unitPrice:  true,
         ping:       true,
         land:       false,
+        parking:    true,
       },
 
       columns: {
@@ -174,13 +179,13 @@ const SITE_CONFIG = {
     // ── 客戶版 ────────────────────
     client: {
       title: '🏠 小楊屋玖壹｜物件資訊',
-      sidebarTitle: '🏠 精選物件',
+      sidebarTitle: '🏠 小楊屋玖壹 精選物件',
       dataFile: './enc//client.enc',
 
-      showLinks:       false,  // 不顯示廣告/YouTube
+      showLinks:       true,  // 不顯示廣告/YouTube
       showMapIcon:     true,   // 地圖跳轉保留
       showFullAddress: false,  // 客戶版：隱藏完整門牌，僅顯示「位置」欄位或地段
-      showPicture:     false,  // 客戶版：不顯示物件圖片連結，僅純文字案名
+      showPicture:     true,  // 客戶版：不顯示物件圖片連結，僅純文字案名
       grade:           false,  // 案件等級
 
       dataFilter: {
@@ -190,7 +195,76 @@ const SITE_CONFIG = {
       },
 
       quickTags: [
-        { label: '🔮 A案', value: 'A', key: '等級' },
+//        { label: '🔮 A案', value: 'A', key: '等級' },
+        { label: '土地',   value: '土地',   key: '類型' },
+        { label: '房屋',   value: '房屋',   key: '類型' },
+        { label: '低總價', value: '低總價', key: '價格區間' },
+        { label: '中價位', value: '中價位', key: '價格區間' },
+        { label: '高價位', value: '高價位', key: '價格區間' },
+      ],
+
+      filters: {
+        keyword:    true,
+        city:       true,
+        area:       false,
+        village:    false,  // 客戶不需村里篩選
+        buildType:  true,
+        rooms:      true,
+        direction:  false,
+        usage:      false,  // 客戶不需使用分區
+        price:      true,
+        unitPrice:  true,
+        ping:       true,
+        interiorPing:       true,
+        land:       true,
+        parking:    true,
+      },
+
+      columns: {
+        caseName:   true,
+        dev:        false,  // 客戶不看開發資訊
+        area:       true,
+        price:      true,
+        unitPrice:  true,
+        layout:     true,
+        totalPing:  true,
+        mainPing:   true,
+        landPing:   true,  // 客戶不看地坪
+        usage:      false,  // 客戶不看使用分區
+        buildType:  true,
+        direction:  false,
+      },
+
+      detailCards: {
+        basicInfo:  false,  // 客戶不看地段/地號/座標
+        feature:    true,
+        school:     true,
+        amenity:    true,
+      },
+
+      popupShowDev: false,
+    },
+
+    // ── 老闆版 ────────────────────
+    boss: {
+      title: '🏠 小楊屋玖壹｜主攻資訊',
+      sidebarTitle: '🏠 精選物件',
+      dataFile: './enc//boss.enc',
+
+      showLinks:       true,  // 不顯示廣告/YouTube
+      showMapIcon:     true,   // 地圖跳轉保留
+      showFullAddress: false,  // 客戶版：隱藏完整門牌，僅顯示「位置」欄位或地段
+      showPicture:     true,  // 客戶版：不顯示物件圖片連結，僅純文字案名
+      grade:           false,  // 案件等級
+
+      dataFilter: {
+        excludeDevNames: ['小楊類專', '小楊私件', '配案'],
+        excludeTypes: [],   // 客戶不看土地
+        onlyDev: ["主攻"],
+      },
+
+      quickTags: [
+//        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '房屋',   value: '房屋',   key: '類型' },
         { label: '低總價', value: '低總價', key: '價格區間' },
         { label: '中價位', value: '中價位', key: '價格區間' },
@@ -209,7 +283,9 @@ const SITE_CONFIG = {
         price:      true,
         unitPrice:  false,
         ping:       true,
-        land:       false,  // 客戶不需土地坪數篩選
+        interiorPing:       true,
+        land:       true,
+        parking:    true,
       },
 
       columns: {

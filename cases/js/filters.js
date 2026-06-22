@@ -38,6 +38,8 @@
       interiorPingMax:      null,
       landMin:      null,
       landMax:      null,
+      parkingMin:   null,
+      parkingMax:   null,
     },
   };
 
@@ -64,6 +66,7 @@
         pingMin: null, pingMax: null,
         interiorPingMin: null, interiorPingMax: null,
         landMin: null, landMax: null,
+        parkingMin: null, parkingMax: null,
       };
     },
   };
