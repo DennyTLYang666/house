@@ -149,6 +149,8 @@
         const carCount = (item.有無車位 === '有') ? (item.車位數量 || 0) : 0;
         if (f.parkingMin !== null && carCount < f.parkingMin) return false;
         if (f.parkingMax !== null && carCount > f.parkingMax) return false;
+        if (f.agesMin !== null && item.屋齡 < f.agesMin) return false;
+        if (f.agesMax !== null && item.屋齡 > f.agesMax) return false;
 
         return true;
       });
@@ -204,14 +206,102 @@
 
   // ── Vue methods mixin ────────────────────
   const vueMethodsMixin = {
-    // ── 單價計算 ──────────────────
+    // ── 單價計算（新格式若已提供「委託單價」直接採用，否則自行換算）──
     unitPrice(item) {
+      if (item.委託單價) return Number(item.委託單價).toFixed(2);
       if (!item.總坪數) {
         if (!item.土地坪數) return '-';
         return (item.委託價 / item.土地坪數).toFixed(2);
       }
       return (item.委託價 / item.總坪數).toFixed(2);
     },
+
+    /**
+     * ╔══════════════════════════════════════════╗
+     * ║  新／舊資料格式相容輔助函式                ║
+     * ╚══════════════════════════════════════════╝
+     * 舊格式（demo_output.json）：行銷文案欄位直接放在物件最外層
+     *   受眾分析 / 賣點 / 地段優勢 / 社區介紹 / 生活機能 / 未來發展 /
+     *   收藏理由 / 產品定位 / 核心賣點 ... 皆為頂層 key
+     *
+     * 新格式（貼上版本）：行銷情報改放在巢狀的 摘要 / 新聞 物件內
+     *   item.摘要.產品定位 / item.摘要.客群分析 / item.摘要.核心賣點 /
+     *   item.摘要.風險提醒 / item.摘要.行銷洞察 / item.摘要.短影音策略 ...
+     *   item.新聞.生活機能 / item.新聞.未來建設 / item.新聞.買方搜尋關鍵字 ...
+     *   item.機能 也可能是分類物件 { 學區, 公園, 市場, 醫療, 商圈 } 而非陣列
+     *
+     * 以下方法統一「先看頂層舊欄位，沒有再看新版巢狀欄位」，
+     * 畫面（index.html）只呼叫這些方法，不需理會資料來源版本差異。
+     */
+
+    // 物件轉成 [key, value] 陣列，過濾掉空值
+    objEntries(obj) {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];
+      return Object.entries(obj).filter(([, v]) => {
+        if (v === null || v === undefined || v === '') return false;
+        if (Array.isArray(v) && v.length === 0) return false;
+        return true;
+      });
+    },
+    // 值轉成顯示文字（陣列以「、」串接）
+    valText(v) { return Array.isArray(v) ? v.join('、') : v; },
+    // 確保回傳陣列（單一字串也包成陣列；無資料回傳空陣列）
+    asList(v) {
+      if (Array.isArray(v)) return v;
+      if (v) return [v];
+      return [];
+    },
+
+    // 🎯 產品定位（物件）：頂層 item.產品定位 → item.摘要.產品定位
+    positioningEntries(item) {
+      return this.objEntries(item.產品定位 || item.摘要?.產品定位);
+    },
+    // 💡 核心賣點（物件，新舊結構共同欄位：第一/二/三賣點、一句話定位）
+    coreSellingPoint(item) {
+      return item.核心賣點 || item.摘要?.核心賣點 || null;
+    },
+    // 👥 客群輪廓：頂層 item.受眾分析（label→一句話） → item.摘要.客群分析（label→陣列）
+    audienceEntries(item) {
+      return this.objEntries(item.受眾分析 || item.摘要?.客群分析);
+    },
+    // 📍 地段優勢 / 🏘 社區介紹 / 🔮 未來發展（純陣列，新格式對應放在 新聞.未來建設）
+    locationAdvantage(item) { return this.asList(item.地段優勢); },
+    communityIntro(item)    { return this.asList(item.社區介紹); },
+    futureDev(item)         { return this.asList(item.未來發展 || item.新聞?.未來建設); },
+    // ✨ 生活機能（長文版）：頂層 item.生活機能 → item.新聞.生活機能
+    lifeFunctionProse(item) { return this.asList(item.生活機能 || item.新聞?.生活機能); },
+    // 💎 收藏理由 / 賣點（短標籤陣列，僅舊格式有）
+    collectReasons(item) { return this.asList(item.收藏理由); },
+    sellPoints(item)      { return this.asList(item.賣點); },
+
+    // 🏙 機能分類延伸標籤（新格式 item.機能 可能是 { 學區,公園,市場,醫療,商圈 } 物件）
+    functionTags(item, category) {
+      const f = item.機能;
+      if (f && typeof f === 'object' && !Array.isArray(f)) return this.asList(f[category]);
+      return [];
+    },
+
+    // ── 行情比較（委託開價 vs 實登成交 vs 社區近一年行情，新格式才有）
+    hasPriceCompare(item) {
+      return !!(item.實登總價 || item.社區一年單價均值 || item.委託單價 || item.社區一年總價均值);
+    },
+    // 開價與實登 / 社區均價的價差百分比（正值＝高於基準）
+    pctDiff(base, ref) {
+      if (!base || !ref) return null;
+      return Math.round(((base - ref) / ref) * 100);
+    },
+
+    // ⚠️ 風險提醒（僅新格式 item.摘要.風險提醒）
+    riskNotes(item) { return this.asList(item.摘要?.風險提醒); },
+    // 📊 行銷洞察（市場判讀 / 成交邏輯 / 溝通重點）
+    marketingInsight(item) { return item.摘要?.行銷洞察 || null; },
+    // 🎬 封面策略／短影音策略／拍攝重點（僅新格式）
+    coverStrategy(item)      { return item.摘要?.封面策略 || null; },
+    shortVideoStrategy(item) { return item.摘要?.短影音策略 || null; },
+    photoPoints(item)        { return this.asList(item.摘要?.照片重點); },
+    mustShots(item)          { return this.asList(item.摘要?.['關鍵鏡頭（必留）']); },
+    // 🔑 買方搜尋關鍵字（僅新格式 item.新聞.買方搜尋關鍵字）
+    searchKeywords(item) { return this.asList(item.新聞?.買方搜尋關鍵字); },
 
     // ── 車位類別縮寫（顯示用），例如 坡道平面 → 坡平
     parkingTypeShort(t) {

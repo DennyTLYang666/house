@@ -25,6 +25,7 @@
       { name: '土地段名代碼暨詮釋資料查詢系統', url: 'https://lisp.land.moi.gov.tw/MMS/MMSpage.aspx#gobox01' },
       { name: '桃園市政府都市計畫', url: 'https://urplanning.tycg.gov.tw/gisMap/Map.aspx' },
       { name: '桃園市政府土地使用分區線上查詢', url: 'https://landuse.tycg.gov.tw/Sys/QueryLandUse/QueryLandUse.aspx' },
+      { name: '國土功能分區懶人包', url: 'https://landplan.nantou.gov.tw/NTOU/upload/news/20220223145139_%E5%9C%8B%E5%9C%9F%E5%8A%9F%E8%83%BD%E5%88%86%E5%8D%80%E6%87%B6%E4%BA%BA%E5%8C%85.pdf' },
     ],
     估價稅務: [
       { name: '實價登錄查詢', url: 'https://lvr.land.moi.gov.tw' },

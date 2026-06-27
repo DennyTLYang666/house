@@ -287,6 +287,16 @@
           </div>
       </div>
 
+      <!-- 屋齢 -->
+      <div class="filter-group" v-if="modeConfig.filters.ages">
+          <label class="filter-label">屋齢</label>
+          <div class="range-row">
+              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.agesMin" />
+              <span class="range-separator">~</span>
+              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.agesMax" />
+          </div>
+      </div>
+
       <button class="reset-btn" @click="resetFilters">清除篩選</button>
     </div>
   </aside>
@@ -437,6 +447,7 @@
                       <div>建物 {{ Number(item.建物坪數).toFixed(2) }}</div>
                       <div>室內 {{ Number(item.室內坪數).toFixed(2) }}</div>
                       <div>主建 {{ Number(item.主建物).toFixed(2) }}</div>
+                      <div v-if="item.屋齡">{{ item.屋齡 }}年</div>
                   </div>
               </td>
               <td v-if="modeConfig.columns.landPing">{{ item.土地坪數 || '-' }}</td>
@@ -541,12 +552,14 @@
                       </div>
                     </div>
 
-                    <!-- ⑥ 周邊生活圈（學區 / 市場 / 公園 / 機能） -->
+                    <!-- ⑥ 周邊生活圈（學區 / 市場 / 公園 / 醫療 / 商圈） -->
                     <div class="detail-card"
                          v-if="modeConfig.detailCards.school && (
                            (item.學區 && item.學區.length) ||
                            (item.市場 && item.市場.length) ||
-                           (item.公園 && item.公園.length)
+                           (item.公園 && item.公園.length) ||
+                           functionTags(item, '醫療').length ||
+                           functionTags(item, '商圈').length
                          )">
                       <div class="detail-title">🏫 周邊生活圈</div>
 
@@ -570,24 +583,224 @@
                           <span class="detail-tag tag-park" v-for="p in item.公園" :key="p">{{ p }}</span>
                         </div>
                       </div>
+
+                      <!-- 新格式：機能為分類物件時，補上醫療 / 商圈 -->
+                      <div class="detail-sub-section" v-if="functionTags(item, '醫療').length">
+                        <div class="detail-sub-title">🏥 醫療</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-medical" v-for="m in functionTags(item, '醫療')" :key="m">{{ m }}</span>
+                        </div>
+                      </div>
+
+                      <div class="detail-sub-section" v-if="functionTags(item, '商圈').length">
+                        <div class="detail-sub-title">🏙 商圈</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-commercial" v-for="c in functionTags(item, '商圈')" :key="c">{{ c }}</span>
+                        </div>
+                      </div>
                     </div>
 
-                      <!-- ⑤ 物件特色 -->
-                    <div class="detail-card" v-if="modeConfig.detailCards.feature">
+                      <!-- ⑤ 物件特色（簡短特色 + 收藏理由 + 賣點） -->
+                    <div class="detail-card detail-card-wide"
+                         v-if="modeConfig.detailCards.feature && (item.簡短特色 || collectReasons(item).length || sellPoints(item).length)">
                       <div v-if="item.簡短特色">
                           <div class="detail-title">✨ 物件特色</div>
                           <ul class="feature-list feature-list-2col">
                               <li v-for="f in item.簡短特色" :key="f">{{ f }}</li>
                           </ul>
                       </div>
+                      <div class="detail-divider" v-if="item.簡短特色 && (collectReasons(item).length || sellPoints(item).length)"></div>
+                      <div class="detail-sub-section" v-if="sellPoints(item).length">
+                        <div class="detail-sub-title">🏷 賣點</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-sellpoint" v-for="s in sellPoints(item)" :key="s">{{ s }}</span>
+                        </div>
+                      </div>
+                      <div class="detail-sub-section" v-if="collectReasons(item).length">
+                        <div class="detail-sub-title">💎 收藏理由</div>
+                        <div class="detail-tag-row">
+                          <span class="detail-tag tag-reason" v-for="r in collectReasons(item)" :key="r">{{ r }}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- ⑦ 生活機能（詳細條列） -->
-                    <div class="detail-card" v-if="modeConfig.detailCards.amenity && item.機能 && item.機能.length">
+                    <!-- ⑦ 生活機能（詳細條列，僅舊格式為陣列時顯示） -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.amenity && Array.isArray(item.機能) && item.機能.length">
                       <div class="detail-title">🏙 生活機能</div>
                       <ul class="feature-list feature-list-2col">
                         <li v-for="m in item.機能" :key="m">{{ m }}</li>
                       </ul>
+                    </div>
+
+                    <!-- ⑧ 深度介紹（地段優勢 / 社區介紹 / 生活機能長文 / 未來發展） -->
+                    <div class="detail-card detail-card-wide"
+                         v-if="modeConfig.detailCards.feature && (
+                           locationAdvantage(item).length || communityIntro(item).length ||
+                           lifeFunctionProse(item).length || futureDev(item).length
+                         )">
+                      <div class="detail-title">📝 深度介紹</div>
+
+                      <div class="detail-sub-section" v-if="locationAdvantage(item).length">
+                        <div class="detail-sub-title">📍 地段優勢</div>
+                        <ul class="feature-list feature-list-2col"><li v-for="t in locationAdvantage(item)" :key="t">{{ t }}</li></ul>
+                      </div>
+                      <div class="detail-sub-section" v-if="communityIntro(item).length">
+                        <div class="detail-sub-title">🏘 社區介紹</div>
+                        <ul class="feature-list feature-list-2col"><li v-for="t in communityIntro(item)" :key="t">{{ t }}</li></ul>
+                      </div>
+                      <div class="detail-sub-section" v-if="lifeFunctionProse(item).length">
+                        <div class="detail-sub-title">🚶 生活機能</div>
+                        <ul class="feature-list feature-list-2col"><li v-for="t in lifeFunctionProse(item)" :key="t">{{ t }}</li></ul>
+                      </div>
+                      <div class="detail-sub-section" v-if="futureDev(item).length">
+                        <div class="detail-sub-title">🔮 未來發展</div>
+                        <ul class="feature-list feature-list-2col"><li v-for="t in futureDev(item)" :key="t">{{ t }}</li></ul>
+                      </div>
+                    </div>
+
+                    <!-- ⑨ 行情比較（委託開價 vs 實登成交 vs 社區近一年行情，新格式才有） -->
+                    <div class="detail-card detail-card-wide"
+                         v-if="modeConfig.detailCards.priceCompare && hasPriceCompare(item)">
+                      <div class="detail-title">💹 行情比較</div>
+                      <div class="detail-row-3">
+                        <div class="detail-stat">
+                          <div class="ds-val">{{ item.委託價 }}萬</div>
+                          <div class="ds-lbl">委託開價{{ item.委託單價 ? `（${item.委託單價}萬/坪）` : '' }}</div>
+                        </div>
+                        <div class="detail-stat" v-if="item.實登總價">
+                          <div class="ds-val">{{ item.實登總價 }}萬</div>
+                          <div class="ds-lbl">實登成交{{ item.實登單價 ? `（${item.實登單價}萬/坪）` : '' }}</div>
+                        </div>
+                        <div class="detail-stat" v-if="item.社區一年單價均值">
+                          <div class="ds-val">{{ item.社區一年單價均值 }}萬</div>
+                          <div class="ds-lbl">社區近一年均價</div>
+                        </div>
+                        <div class="detail-stat" v-if="item.社區一年單價中位數">
+                          <div class="ds-val">{{ item.社區一年單價中位數 }}萬</div>
+                          <div class="ds-lbl">社區近一年中位</div>
+                        </div>
+                        <div class="detail-stat" v-if="item.社區一年總價均值">
+                          <div class="ds-val">{{ item.社區一年總價均值 }}萬</div>
+                          <div class="ds-lbl">社區近一年總價均</div>
+                        </div>
+                        <div class="detail-stat" v-if="item.社區最高價">
+                          <div class="ds-val">{{ item.社區最高價 }}萬</div>
+                          <div class="ds-lbl">社區最高單價</div>
+                        </div>
+                        <div class="detail-stat" v-if="item.社區實登筆數">
+                          <div class="ds-val">{{ item.社區實登筆數 }}</div>
+                          <div class="ds-lbl">近一年實登筆數</div>
+                        </div>
+                      </div>
+                      <div class="detail-divider"></div>
+                      <div class="detail-row-2">
+                        <div class="detail-item" v-if="item.交易時間">📅 實登交易時間：{{ item.交易時間 }}</div>
+                        <div class="detail-item" v-if="pctDiff(item.委託單價 || unitPrice(item), item.社區一年單價均值) !== null">
+                          📐 開價較社區均價
+                          <strong :style="{color: pctDiff(item.委託單價 || unitPrice(item), item.社區一年單價均值) > 0 ? '#dc2626' : '#16a34a'}">
+                            {{ pctDiff(item.委託單價 || unitPrice(item), item.社區一年單價均值) > 0 ? '+' : '' }}{{ pctDiff(item.委託單價 || unitPrice(item), item.社區一年單價均值) }}%
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- ⑩ 產品定位與核心賣點 -->
+                    <div class="detail-card detail-card-wide"
+                         v-if="modeConfig.detailCards.feature && (positioningEntries(item).length || coreSellingPoint(item))">
+                      <div class="detail-title">🎯 產品定位與核心賣點</div>
+                      <div class="detail-row-2" v-if="positioningEntries(item).length">
+                        <div class="detail-item" v-for="[k, v] in positioningEntries(item)" :key="k">
+                          <strong>{{ k }}：</strong>{{ valText(v) }}
+                        </div>
+                      </div>
+                      <template v-if="coreSellingPoint(item)">
+                        <div class="detail-divider" v-if="positioningEntries(item).length"></div>
+                        <div class="detail-row-2">
+                          <div class="detail-item" v-if="coreSellingPoint(item).第一賣點">🥇 {{ coreSellingPoint(item).第一賣點 }}</div>
+                          <div class="detail-item" v-if="coreSellingPoint(item).第二賣點">🥈 {{ coreSellingPoint(item).第二賣點 }}</div>
+                          <div class="detail-item" v-if="coreSellingPoint(item).第三賣點">🥉 {{ coreSellingPoint(item).第三賣點 }}</div>
+                        </div>
+                        <div class="detail-highlight" v-if="coreSellingPoint(item).一句話定位">
+                          💬 {{ coreSellingPoint(item).一句話定位 }}
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- ⑪ 客群輪廓 -->
+                    <div class="detail-card detail-card-wide" v-if="modeConfig.detailCards.feature && audienceEntries(item).length">
+                      <div class="detail-title">👥 客群輪廓</div>
+                      <div class="detail-sub-section" v-for="[k, v] in audienceEntries(item)" :key="k">
+                        <div class="detail-sub-title">{{ k }}</div>
+                        <div class="detail-tag-row" v-if="Array.isArray(v)">
+                          <span class="detail-tag tag-audience" v-for="t in v" :key="t">{{ t }}</span>
+                        </div>
+                        <div class="detail-item" v-else>{{ v }}</div>
+                      </div>
+                    </div>
+
+                    <!-- ⑫ 行銷洞察 / 風險提醒（內部用，新格式才有） -->
+                    <div class="detail-card detail-card-wide"
+                         v-if="modeConfig.detailCards.marketing && (marketingInsight(item) || riskNotes(item).length)">
+                      <div class="detail-title">📊 行銷洞察與風險提醒</div>
+                      <template v-if="marketingInsight(item)">
+                        <div class="detail-item detail-prose" v-if="marketingInsight(item).市場判讀">🔍 市場判讀：{{ marketingInsight(item).市場判讀 }}</div>
+                        <div class="detail-item detail-prose" v-if="marketingInsight(item).成交邏輯">🤝 成交邏輯：{{ marketingInsight(item).成交邏輯 }}</div>
+                        <div class="detail-sub-section" v-if="marketingInsight(item).溝通重點 && marketingInsight(item).溝通重點.length">
+                          <div class="detail-sub-title">🗣 溝通重點</div>
+                          <ul class="feature-list feature-list-2col"><li v-for="t in marketingInsight(item).溝通重點" :key="t">{{ t }}</li></ul>
+                        </div>
+                      </template>
+                      <div class="detail-divider" v-if="marketingInsight(item) && riskNotes(item).length"></div>
+                      <div class="detail-sub-section" v-if="riskNotes(item).length">
+                        <div class="detail-sub-title">⚠️ 風險提醒</div>
+                        <ul class="feature-list feature-list-2col risk-list"><li v-for="t in riskNotes(item)" :key="t">{{ t }}</li></ul>
+                      </div>
+                    </div>
+
+                    <!-- ⑬ 拍攝與短影音腳本（內部用，新格式才有） -->
+                    <div class="detail-card detail-card-wide"
+                         v-if="modeConfig.detailCards.marketing && (coverStrategy(item) || shortVideoStrategy(item) || photoPoints(item).length)">
+                      <div class="detail-title">🎬 拍攝與短影音腳本</div>
+                      <template v-if="coverStrategy(item)">
+                        <div class="detail-item" v-if="coverStrategy(item).主打方向"><strong>主打方向：</strong>{{ coverStrategy(item).主打方向 }}</div>
+                        <div class="detail-tag-row" v-if="asList(coverStrategy(item).次要方向).length" style="margin-top:4px">
+                          <span class="detail-tag tag-secondary" v-for="t in asList(coverStrategy(item).次要方向)" :key="t">{{ t }}</span>
+                        </div>
+                        <div class="detail-tag-row" v-if="asList(coverStrategy(item).禁用方向).length" style="margin-top:4px">
+                          <span class="detail-tag tag-forbidden" v-for="t in asList(coverStrategy(item).禁用方向)" :key="t">🚫 {{ t }}</span>
+                        </div>
+                      </template>
+                      <template v-if="shortVideoStrategy(item)">
+                        <div class="detail-divider" v-if="coverStrategy(item)"></div>
+                        <div class="detail-item detail-prose" v-if="shortVideoStrategy(item).前三秒鉤子">🪝 前三秒鉤子：{{ shortVideoStrategy(item).前三秒鉤子 }}</div>
+                        <div class="detail-item detail-prose" v-if="shortVideoStrategy(item).核心情緒">❤️ 核心情緒：{{ shortVideoStrategy(item).核心情緒 }}</div>
+                        <div class="detail-tag-row" v-if="asList(shortVideoStrategy(item).封面主標建議).length" style="margin-top:4px">
+                          <span class="detail-tag tag-coverline" v-for="t in asList(shortVideoStrategy(item).封面主標建議)" :key="t">{{ t }}</span>
+                        </div>
+                      </template>
+                      <template v-if="photoPoints(item).length || mustShots(item).length">
+                        <div class="detail-divider" v-if="coverStrategy(item) || shortVideoStrategy(item)"></div>
+                        <div class="detail-sub-section" v-if="photoPoints(item).length">
+                          <div class="detail-sub-title">📷 照片重點</div>
+                          <div class="detail-tag-row">
+                            <span class="detail-tag tag-photo" v-for="t in photoPoints(item)" :key="t">{{ t }}</span>
+                          </div>
+                        </div>
+                        <div class="detail-sub-section" v-if="mustShots(item).length">
+                          <div class="detail-sub-title">🎥 關鍵鏡頭（必留）</div>
+                          <div class="detail-tag-row">
+                            <span class="detail-tag tag-mustshot" v-for="t in mustShots(item)" :key="t">{{ t }}</span>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- ⑭ 買方搜尋關鍵字（內部用，新格式才有） -->
+                    <div class="detail-card" v-if="modeConfig.detailCards.marketing && searchKeywords(item).length">
+                      <div class="detail-title">🔑 買方搜尋關鍵字</div>
+                      <div class="detail-tag-row">
+                        <span class="detail-tag tag-keyword" v-for="k in searchKeywords(item)" :key="k">{{ k }}</span>
+                      </div>
                     </div>
 
                   </div>

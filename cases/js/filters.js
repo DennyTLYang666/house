@@ -40,6 +40,8 @@
       landMax:      null,
       parkingMin:   null,
       parkingMax:   null,
+      agesMin:      null,
+      agesMax:      null,
     },
   };
 
@@ -67,6 +69,7 @@
         interiorPingMin: null, interiorPingMax: null,
         landMin: null, landMax: null,
         parkingMin: null, parkingMax: null,
+        agesMin: null, agesMax: null,
       };
     },
   };

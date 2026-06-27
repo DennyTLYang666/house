@@ -52,6 +52,7 @@ const SITE_CONFIG = {
 //        { label: '🔮 A案', value: 'A', key: '等級' },
         { label: '主攻',   value: '主攻',   key: '開發' },
         { label: '小楊',   value: '小楊',   key: '開發' },
+        { label: '小楊類專',   value: '小楊類專',   key: '開發' },
         { label: '配案',   value: '配案',   key: '開發' },
         { label: '土地',   value: '土地',   key: '類型' },
         { label: '房屋',   value: '房屋',   key: '類型' },
@@ -77,6 +78,7 @@ const SITE_CONFIG = {
         interiorPing:       true,
         land:       true,
         parking:    true,
+        ages:       true,
       },
 
       // 表格欄位
@@ -97,11 +99,13 @@ const SITE_CONFIG = {
 
       // 展開詳細卡片
       detailCards: {
-        basicInfo:  true,   // 基本資訊（含地段/地號/座標）
-        feature:    true,
-        school:     true,
-        amenity:    true,
-        entrust:    true,
+        basicInfo:    true,   // 基本資訊（含地段/地號/座標）
+        feature:      true,
+        school:       true,
+        amenity:      true,
+        entrust:      true,
+        priceCompare: true,   // 行情比較（委託 vs 實登 vs 社區近一年）— 新格式資料才會出現
+        marketing:    true,   // 行銷洞察／風險提醒／拍攝腳本（內部用）— 新格式資料才會出現
       },
 
       // 地圖 popup 顯示
@@ -149,6 +153,7 @@ const SITE_CONFIG = {
         ping:       true,
         land:       false,
         parking:    true,
+        ages:       true,
       },
 
       columns: {
@@ -167,10 +172,12 @@ const SITE_CONFIG = {
       },
 
       detailCards: {
-        basicInfo:  true,
-        feature:    true,
-        school:     true,
-        amenity:    true,
+        basicInfo:    true,
+        feature:      true,
+        school:       true,
+        amenity:      true,
+        priceCompare: true,
+        marketing:    true,
       },
 
       popupShowDev: false,
@@ -218,6 +225,7 @@ const SITE_CONFIG = {
         interiorPing:       true,
         land:       true,
         parking:    true,
+        ages:       true,
       },
 
       columns: {
@@ -286,6 +294,7 @@ const SITE_CONFIG = {
         interiorPing:       true,
         land:       true,
         parking:    true,
+        ages:       true,
       },
 
       columns: {
