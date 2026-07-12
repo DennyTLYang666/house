@@ -110,194 +110,259 @@
         <h2 id="sidebarTitle">🏠 小楊房屋</h2>
         <button class="sidebar-close-btn" @click="sidebarOpen = false" aria-label="關閉篩選">✕</button>
       </div>
-      <input class="search-input" v-model="filters.keyword" placeholder="搜尋案名 / 區域 / 地段…" />
+      <input class="search-input" v-if="view === 'table'" v-model="filters.keyword" placeholder="搜尋案名 / 區域 / 地段…" />
     </div>
 
     <div class="sidebar-body">
 
-      <!-- 快速篩選 -->
-      <div class="filter-section">
-        <div class="filter-title">快速篩選</div>
-        <div class="quick-tags">
-          <div
-            v-for="tag in modeConfig.quickTags"
-            :key="tag.value"
-            class="quick-tag"
-            :class="{ active: filters.quickValue === tag.value }"
-            @click="quickType(tag.value, tag.key)"
-          >{{ tag.label }}</div>
-        </div>
-      </div>
+      <!-- 地圖圖層 & 物件顯示模式（只在地圖頁顯示，置頂讓使用者不需要捲動）-->
+      <template v-if="view === 'map'">
 
-      <!-- 特殊篩選（staff only，有資料才顯示） -->
-      <div class="filter-section"
-           v-if="modeConfig._name === 'staff' && (expiringSoonCount > 0 || soldData.length > 0)">
-        <div class="filter-title">特殊篩選</div>
-        <div class="special-filter-group">
-          <div
-            v-if="expiringSoonCount > 0"
-            class="special-filter-btn"
-            :class="{ active: specialFilter === 'expiring', 'expire-active': specialFilter === 'expiring' }"
-            @click="setSpecialFilter('expiring')"
-          >
-            <span class="sf-dot sf-dot-orange"></span>
-            <span class="sf-label">即將到期</span>
-            <span class="sf-count">{{ expiringSoonCount }}</span>
-          </div>
-          <div
-            v-if="soldData.length > 0"
-            class="special-filter-btn"
-            :class="{ active: specialFilter === 'sold', 'sold-active': specialFilter === 'sold' }"
-            @click="setSpecialFilter('sold')"
-          >
-            <span class="sf-dot sf-dot-gray"></span>
-            <span class="sf-label">已售物件</span>
-            <span class="sf-count">{{ soldData.length }}</span>
+        <!-- 案件物件顯示模式 -->
+        <div class="filter-section">
+          <div class="filter-title">案件物件顯示</div>
+          <div class="poi-mode-options">
+            <label class="poi-radio-row">
+              <input type="radio" name="mapObjectMode" value="all"
+                     :checked="mapObjectMode === 'all'" @change="setMapObjectMode('all')" />
+              顯示全部物件
+            </label>
+            <label class="poi-radio-row">
+              <input type="radio" name="mapObjectMode" value="none"
+                     :checked="mapObjectMode === 'none'" @change="setMapObjectMode('none')" />
+              不顯示物件
+            </label>
+            <label class="poi-radio-row" :class="{ disabled: !mapSingleItemId }">
+              <input type="radio" name="mapObjectMode" value="single"
+                     :disabled="!mapSingleItemId"
+                     :checked="mapObjectMode === 'single'" @change="setMapObjectMode('single')" />
+              <span>只顯示{{ mapSingleItemName() ? '：' + mapSingleItemName() : '指定物件（先從列表點🗺）' }}</span>
+            </label>
           </div>
         </div>
-      </div>
 
-      <!-- 縣市 -->
-      <div class="filter-section" v-if="modeConfig.filters.city">
-        <div class="filter-title">縣市</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="city in cityOptions" :key="city">
-            <input type="checkbox" v-model="filters.citys" :value="city" />{{ city }}
-          </label>
-        </div>
-      </div>
-
-      <!-- 行政區 -->
-      <div class="filter-section" v-if="modeConfig.filters.area">
-        <div class="filter-title">行政區</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="area in areaOptions" :key="area">
-            <input type="checkbox" v-model="filters.areas" :value="area" />{{ area }}
-          </label>
-        </div>
-      </div>
-
-      <!-- 村里 -->
-      <div class="filter-section" v-if="modeConfig.filters.village">
-        <div class="filter-title">村里</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="village in villageOptions" :key="village">
-            <input type="checkbox" v-model="filters.villages" :value="village" />{{ village }}
-          </label>
-        </div>
-      </div>
-
-      <!-- 建物型態 -->
-      <div class="filter-section" v-if="modeConfig.filters.buildType">
-        <div class="filter-title">建物型態</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="bt in buildTypeOptions" :key="bt">
-            <input type="checkbox" v-model="filters.buildTypes" :value="bt" />{{ bt }}
-          </label>
-        </div>
-      </div>
-
-      <!-- 房間數 -->
-      <div class="filter-section" v-if="modeConfig.filters.rooms">
-        <div class="filter-title">房間數</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="r in roomOptions" :key="r">
-            <input type="checkbox" v-model="filters.rooms" :value="r" />{{ r }}房
-          </label>
-        </div>
-      </div>
-
-      <!-- 座向 -->
-      <div class="filter-section" v-if="modeConfig.filters.direction">
-        <div class="filter-title">座向</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="r in directionOptions" :key="r">
-            <input type="checkbox" v-model="filters.directions" :value="r" />{{ r }}
-          </label>
-        </div>
-      </div>
-
-      <!-- 使用分區 -->
-      <div class="filter-section" v-if="modeConfig.filters.usage">
-        <div class="filter-title">使用分區</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-item" v-for="u in usageOptions" :key="u">
-            <input type="checkbox" v-model="filters.usages" :value="u" />{{ u }}
-          </label>
-        </div>
-      </div>
-
-      <!-- 總價 -->
-      <div class="filter-group" v-if="modeConfig.filters.price">
-          <label class="filter-label">總價（萬）</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model="filters.priceMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model="filters.priceMax" />
+        <!-- 圖層（POI）勾選樹 -->
+        <div class="filter-section" v-if="poiConfig.length">
+          <div class="filter-title">圖層</div>
+          <div class="poi-tree">
+            <div class="poi-category-block" v-for="(items, cat) in poiGrouped()" :key="cat">
+              <div class="poi-row poi-row-parent"
+                   :class="poiCategoryState(cat)"
+                   @click="togglePoiCategory(cat)">
+                <span class="poi-box"></span>
+                <span class="poi-label">{{ cat }}</span>
+              </div>
+              <div class="poi-children">
+                <div class="poi-row"
+                     v-for="item in items" :key="item.類型"
+                     :class="{ checked: poiChecked[item.類型] }"
+                     @click="togglePoiType(item.類型)">
+                  <span class="poi-box"></span>
+                  <span class="poi-label">{{ item.emoji }} {{ item.類型 }}</span>
+                  <span class="poi-spinner" v-if="poiLoading[item.類型]">⏳</span>
+                </div>
+              </div>
+            </div>
           </div>
-      </div>
+        </div>
+        <!-- 圖層設定讀取中（尚未載入完）-->
+        <div class="filter-section" v-else>
+          <div class="filter-title">圖層</div>
+          <div style="font-size:12px;color:var(--text2);padding:4px 2px">⏳ 讀取圖層設定中…</div>
+        </div>
 
-      <!-- 單價 -->
-      <div class="filter-group" v-if="modeConfig.filters.unitPrice">
-          <label class="filter-label">單價（萬/坪）</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.unitPriceMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.unitPriceMax" />
+        <hr class="sidebar-divider" />
+      </template>
+
+      <!-- 一般篩選 —— 只在列表頁顯示，地圖模式不顯示篩選功能 -->
+      <template v-if="view === 'table'">
+
+        <!-- 快速篩選 -->
+        <div class="filter-section">
+          <div class="filter-title">快速篩選</div>
+          <div class="quick-tags">
+            <div
+              v-for="tag in modeConfig.quickTags"
+              :key="tag.value"
+              class="quick-tag"
+              :class="{ active: filters.quickValue === tag.value }"
+              @click="quickType(tag.value, tag.key)"
+            >{{ tag.label }}</div>
           </div>
-      </div>
+        </div>
 
-      <!-- 總坪數 -->
-      <div class="filter-group" v-if="modeConfig.filters.ping">
-          <label class="filter-label">總坪數</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model="filters.pingMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model="filters.pingMax" />
+        <!-- 特殊篩選（staff only，有資料才顯示） -->
+        <div class="filter-section"
+             v-if="modeConfig._name === 'staff' && (expiringSoonCount > 0 || soldData.length > 0)">
+          <div class="filter-title">特殊篩選</div>
+          <div class="special-filter-group">
+            <div
+              v-if="expiringSoonCount > 0"
+              class="special-filter-btn"
+              :class="{ active: specialFilter === 'expiring', 'expire-active': specialFilter === 'expiring' }"
+              @click="setSpecialFilter('expiring')"
+            >
+              <span class="sf-dot sf-dot-orange"></span>
+              <span class="sf-label">即將到期</span>
+              <span class="sf-count">{{ expiringSoonCount }}</span>
+            </div>
+            <div
+              v-if="soldData.length > 0"
+              class="special-filter-btn"
+              :class="{ active: specialFilter === 'sold', 'sold-active': specialFilter === 'sold' }"
+              @click="setSpecialFilter('sold')"
+            >
+              <span class="sf-dot sf-dot-gray"></span>
+              <span class="sf-label">已售物件</span>
+              <span class="sf-count">{{ soldData.length }}</span>
+            </div>
           </div>
-      </div>
+        </div>
 
-      <!-- 室內坪數 -->
-      <div class="filter-group" v-if="modeConfig.filters.interiorPing">
-          <label class="filter-label">室內坪數</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model="filters.interiorPingMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model="filters.interiorPingMax" />
+        <!-- 縣市 -->
+        <div class="filter-section" v-if="modeConfig.filters.city">
+          <div class="filter-title">縣市</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="city in cityOptions" :key="city">
+              <input type="checkbox" v-model="filters.citys" :value="city" />{{ city }}
+            </label>
           </div>
-      </div>
+        </div>
 
-      <!-- 土地坪數 -->
-      <div class="filter-group" v-if="modeConfig.filters.land">
-          <label class="filter-label">土地坪數</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.landMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.landMax" />
+        <!-- 行政區 -->
+        <div class="filter-section" v-if="modeConfig.filters.area">
+          <div class="filter-title">行政區</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="area in areaOptions" :key="area">
+              <input type="checkbox" v-model="filters.areas" :value="area" />{{ area }}
+            </label>
           </div>
-      </div>
+        </div>
 
-      <!-- 車位數量 -->
-      <div class="filter-group" v-if="modeConfig.filters.parking">
-          <label class="filter-label">車位數量</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.parkingMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.parkingMax" />
+        <!-- 村里 -->
+        <div class="filter-section" v-if="modeConfig.filters.village">
+          <div class="filter-title">村里</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="village in villageOptions" :key="village">
+              <input type="checkbox" v-model="filters.villages" :value="village" />{{ village }}
+            </label>
           </div>
-      </div>
+        </div>
 
-      <!-- 屋齢 -->
-      <div class="filter-group" v-if="modeConfig.filters.ages">
-          <label class="filter-label">屋齢</label>
-          <div class="range-row">
-              <input type="number" class="range-input" placeholder="最低" v-model.number="filters.agesMin" />
-              <span class="range-separator">~</span>
-              <input type="number" class="range-input" placeholder="最高" v-model.number="filters.agesMax" />
+        <!-- 建物型態 -->
+        <div class="filter-section" v-if="modeConfig.filters.buildType">
+          <div class="filter-title">建物型態</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="bt in buildTypeOptions" :key="bt">
+              <input type="checkbox" v-model="filters.buildTypes" :value="bt" />{{ bt }}
+            </label>
           </div>
-      </div>
+        </div>
 
-      <button class="reset-btn" @click="resetFilters">清除篩選</button>
+        <!-- 房間數 -->
+        <div class="filter-section" v-if="modeConfig.filters.rooms">
+          <div class="filter-title">房間數</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="r in roomOptions" :key="r">
+              <input type="checkbox" v-model="filters.rooms" :value="r" />{{ r }}房
+            </label>
+          </div>
+        </div>
+
+        <!-- 座向 -->
+        <div class="filter-section" v-if="modeConfig.filters.direction">
+          <div class="filter-title">座向</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="r in directionOptions" :key="r">
+              <input type="checkbox" v-model="filters.directions" :value="r" />{{ r }}
+            </label>
+          </div>
+        </div>
+
+        <!-- 使用分區 -->
+        <div class="filter-section" v-if="modeConfig.filters.usage">
+          <div class="filter-title">使用分區</div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item" v-for="u in usageOptions" :key="u">
+              <input type="checkbox" v-model="filters.usages" :value="u" />{{ u }}
+            </label>
+          </div>
+        </div>
+
+        <!-- 總價 -->
+        <div class="filter-group" v-if="modeConfig.filters.price">
+            <label class="filter-label">總價（萬）</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model="filters.priceMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model="filters.priceMax" />
+            </div>
+        </div>
+
+        <!-- 單價 -->
+        <div class="filter-group" v-if="modeConfig.filters.unitPrice">
+            <label class="filter-label">單價（萬/坪）</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model.number="filters.unitPriceMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model.number="filters.unitPriceMax" />
+            </div>
+        </div>
+
+        <!-- 總坪數 -->
+        <div class="filter-group" v-if="modeConfig.filters.ping">
+            <label class="filter-label">總坪數</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model="filters.pingMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model="filters.pingMax" />
+            </div>
+        </div>
+
+        <!-- 室內坪數 -->
+        <div class="filter-group" v-if="modeConfig.filters.interiorPing">
+            <label class="filter-label">室內坪數</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model="filters.interiorPingMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model="filters.interiorPingMax" />
+            </div>
+        </div>
+
+        <!-- 土地坪數 -->
+        <div class="filter-group" v-if="modeConfig.filters.land">
+            <label class="filter-label">土地坪數</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model.number="filters.landMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model.number="filters.landMax" />
+            </div>
+        </div>
+
+        <!-- 車位數量 -->
+        <div class="filter-group" v-if="modeConfig.filters.parking">
+            <label class="filter-label">車位數量</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model.number="filters.parkingMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model.number="filters.parkingMax" />
+            </div>
+        </div>
+
+        <!-- 屋齢 -->
+        <div class="filter-group" v-if="modeConfig.filters.ages">
+            <label class="filter-label">屋齢</label>
+            <div class="range-row">
+                <input type="number" class="range-input" placeholder="最低" v-model.number="filters.agesMin" />
+                <span class="range-separator">~</span>
+                <input type="number" class="range-input" placeholder="最高" v-model.number="filters.agesMax" />
+            </div>
+        </div>
+
+        <button class="reset-btn" @click="resetFilters">清除篩選</button>
+
+      </template>
+
     </div>
   </aside>
 
@@ -359,7 +424,7 @@
             <th v-if="modeConfig.columns.usage"     style="width:70px">使用分區</th>
             <th style="width:70px">建物型態</th>
             <th v-if="modeConfig.columns.direction" style="width:70px">座向</th>
-            <th style="width:70px">操作</th>
+            <th v-if="modeConfig.canViewDetail" style="width:70px">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -457,17 +522,24 @@
               </td>
               <td>{{ item.建物型態 }}</td>
               <td v-if="modeConfig.columns.direction">{{ item.座向 || '-' }}</td>
-              <td>
+              <td v-if="modeConfig.canViewDetail">
                 <span class="expand-btn" @click="toggleExpand(item.id)">
-                  {{ expandedIds.includes(item.id) ? '▲收合' : '▼詳細' }}
+                  {{ isExpanded(item.id) ? '▲收合' : '▼詳細' }}
                 </span>
               </td>
             </tr>
 
-            <!-- 展開詳細 -->
-            <tr v-if="expandedIds.includes(item.id)">
+            <!-- 展開詳細（僅 staff 模式可用，canViewDetail 權限開關） -->
+            <tr v-if="modeConfig.canViewDetail && isExpanded(item.id)">
               <td :colspan="colSpan">
-                <div class="detail-box">
+                <!--
+                  v-once：這塊內容只跟 item 有關，item 本身載入後不會變動，
+                  所以只要渲染過一次就不需要在「其他列展開/收合、排序、篩選」
+                  等不相關的畫面更新時被重新 diff 一次。
+                  展開的列數一多、卡片內容變豐富後，沒有 v-once 的話每次互動
+                  都要重新比對整棵子樹，就是滑鼠卡頓的主要原因。
+                -->
+                <div class="detail-box" v-once>
                   <div class="detail-grid">
 
                     <!-- ① 物件資訊（所有模式） -->
@@ -803,6 +875,68 @@
                       </div>
                     </div>
 
+                    <!-- ⑮ 國土測繪查詢（staff only，按鈕觸發，快取結果） -->
+                    <div class="detail-card detail-card-wide" v-if="modeConfig.detailCards.marketing">
+                      <div class="detail-title">🏛 國土測繪資訊</div>
+                      <div v-if="!nlscCache[item.id] && !nlscLoading[item.id]">
+                        <button class="nlsc-query-btn" @click="queryNlsc(item)">
+                          查詢土地使用分區 / 地籍資訊
+                        </button>
+                        <div class="nlsc-hint">資料來源：內政部國土測繪中心（免費，即時查詢）</div>
+                      </div>
+                      <div v-if="nlscLoading[item.id]" class="nlsc-loading">⏳ 查詢中，請稍候…</div>
+                      <div v-if="nlscCache[item.id]">
+                        <!-- 查詢失敗 -->
+                        <div v-if="nlscCache[item.id].error" class="nlsc-error">
+                          ⚠️ {{ nlscCache[item.id].error }}
+                        </div>
+                        <!-- 土地使用分區 -->
+                        <div v-if="nlscCache[item.id].landUse" class="nlsc-section">
+                          <div class="detail-sub-title">📐 土地使用分區</div>
+                          <div class="detail-row-2">
+                            <div class="detail-item" v-if="nlscCache[item.id].landUse.使用分區">
+                              <strong>使用分區：</strong>{{ nlscCache[item.id].landUse.使用分區 }}
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landUse.都市計畫案">
+                              <strong>都市計畫：</strong>{{ nlscCache[item.id].landUse.都市計畫案 }}
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landUse.容積率">
+                              <strong>容積率：</strong>{{ nlscCache[item.id].landUse.容積率 }}%
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landUse.建蔽率">
+                              <strong>建蔽率：</strong>{{ nlscCache[item.id].landUse.建蔽率 }}%
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landUse.使用地類別">
+                              <strong>使用地類別：</strong>{{ nlscCache[item.id].landUse.使用地類別 }}
+                            </div>
+                          </div>
+                        </div>
+                        <!-- 地籍資料 -->
+                        <div v-if="nlscCache[item.id].landInfo" class="nlsc-section">
+                          <div class="detail-divider"></div>
+                          <div class="detail-sub-title">📋 地籍資料</div>
+                          <div class="detail-row-2">
+                            <div class="detail-item" v-if="nlscCache[item.id].landInfo.公告地價 !== '-'">
+                              <strong>公告地價：</strong>{{ nlscCache[item.id].landInfo.公告地價 }} 元/㎡
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landInfo.公告現值 !== '-'">
+                              <strong>公告現值：</strong>{{ nlscCache[item.id].landInfo.公告現值 }} 元/㎡
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landInfo.土地面積 !== '-'">
+                              <strong>土地面積：</strong>{{ nlscCache[item.id].landInfo.土地面積 }} ㎡
+                            </div>
+                            <div class="detail-item" v-if="nlscCache[item.id].landInfo.公有私有 !== '-'">
+                              <strong>公有/私有：</strong>{{ nlscCache[item.id].landInfo.公有私有 }}
+                            </div>
+                          </div>
+                        </div>
+                        <!-- 重新查詢 -->
+                        <button class="nlsc-requery-btn" @click="nlscCache = {...nlscCache, [item.id]: null}; queryNlsc(item)">
+                          🔄 重新查詢
+                        </button>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </td>
@@ -814,8 +948,8 @@
       </table>
     </div>
 
-    <!-- MAP VIEW -->
-    <div class="map-view" v-if="view === 'map'">
+    <!-- MAP VIEW (v-show 而非 v-if：讓 #map 永遠在 DOM 裡，Leaflet 才找得到容器) -->
+    <div class="map-view" v-show="view === 'map'">
       <div class="map-overlay-stats">
         <div class="map-stat-pill">篩選結果 <strong>{{ filteredData.length }}</strong> 筆</div>
         <div class="map-stat-pill">均價 <strong>{{ averagePrice }} 萬</strong></div>
@@ -840,6 +974,8 @@
 <script src="./js/data.js"></script>      <!-- YangData：資料載入 / 篩選 / 統計 -->
 <script src="./js/app-init.js"></script>  <!-- hash 驗證 / 解密函式 / GA init -->
 <script src="./js/app-map.js"></script>   <!-- MapMethods 物件 -->
+<script src="./js/poi.js"></script>       <!-- PoiMethods：圖層（POI）勾選邏輯 -->
+<script src="./js/nlsc.js"></script>      <!-- NlscMethods：國土測繪中心 API 查詢 -->
 <script src="./js/filters.js"></script>   <!-- YangFilters：filters 狀態 / 快速篩選 / 清除 -->
 <script src="./js/app-vue.js"></script>   <!-- Vue createApp：組合以上模組 -->
 <script src="./js/tools.js"></script>     <!-- Staff 工具連結面板（自動在 staff 模式掛載） -->

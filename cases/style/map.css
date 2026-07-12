@@ -68,6 +68,8 @@ html, body { height: 100%; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sa
 .sidebar-body::-webkit-scrollbar { width: 4px; }
 .sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 8px; }
+
 .filter-section { margin-bottom: 18px; }
 
 .filter-title {
@@ -100,6 +102,116 @@ html, body { height: 100%; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sa
 .checkbox-item input { margin: 0; cursor: pointer; accent-color: var(--accent); }
 
 .quick-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── 圖層（POI）勾選樹 ───────────────────── */
+.poi-tree { display: flex; flex-direction: column; gap: 2px; }
+.poi-category-block { margin-bottom: 4px; }
+
+.poi-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: background .15s;
+  user-select: none;
+}
+.poi-row:hover { background: var(--accent-light); }
+.poi-row-parent { font-weight: 700; }
+.poi-children { margin-left: 18px; display: flex; flex-direction: column; gap: 1px; }
+
+.poi-box {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  position: relative;
+  transition: background .15s, border-color .15s;
+}
+.poi-box::after {
+  content: '';
+  position: absolute;
+  display: none;
+}
+/* 已勾選：打勾 */
+.poi-row.checked .poi-box,
+.poi-row-parent.all .poi-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.poi-row.checked .poi-box::after,
+.poi-row-parent.all .poi-box::after {
+  display: block;
+  left: 5px; top: 1px;
+  width: 4px; height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+/* 部分勾選（大分類）：實心方塊（indeterminate） */
+.poi-row-parent.partial .poi-box { background: var(--accent); border-color: var(--accent); opacity: .55; }
+.poi-row-parent.partial .poi-box::after {
+  display: block;
+  left: 3px; top: 6px;
+  width: 8px; height: 2px;
+  background: white; border: none;
+}
+.poi-label { flex: 1; }
+.poi-spinner { font-size: 11px; }
+
+/* ── 案件物件顯示模式 ───────────────────── */
+.poi-mode-options { display: flex; flex-direction: column; gap: 6px; }
+.poi-radio-row {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--text); cursor: pointer;
+}
+.poi-radio-row.disabled { color: var(--text2); cursor: not-allowed; }
+.poi-radio-row input { accent-color: var(--accent); cursor: pointer; }
+.poi-radio-row.disabled input { cursor: not-allowed; }
+
+/* ── 地圖上的 POI marker / cluster / popup ───────────────────── */
+.poi-pin {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
+.poi-cluster-badge {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22);
+}
+.poi-cluster-num {
+  position: absolute;
+  bottom: -4px; right: -4px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px;
+  border: 1.5px solid white;
+}
+.poi-popup .popup-name { margin-bottom: 6px; }
+.poi-popup-addr { font-size: 12px; color: var(--text2); margin-bottom: 3px; }
+.poi-popup-note { font-size: 12px; color: var(--text2); }
+
 .quick-tag {
   padding: 5px 12px;
   background: var(--accent-light);
@@ -779,6 +891,10 @@ tr.row-sold .title-link { color: #9ca3af !important; pointer-events: none; }
   padding: 16px;
   border-radius: 14px;
   margin-top: 8px;
+  /* 這個區塊內容變多後（9張卡片＋大量標籤），若不隔離，瀏覽器在展開/收合
+     時得重新計算整個表格甚至整頁的版面。加上 containment 讓這塊的版面、
+     繪製都侵限在自己範圍內，不會牽連外部，能明顯改善展開那一瞬間的卡頓。 */
+  contain: content;
   border: 1px solid #eaeff8;
 }
 
@@ -956,3 +1072,22 @@ tr.row-sold .title-link { color: #9ca3af !important; pointer-events: none; }
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
 }
+/* ── 國土測繪查詢卡片 ───────────────────── */
+.nlsc-query-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px;
+  background: var(--accent); color: white;
+  border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: opacity .15s;
+}
+.nlsc-query-btn:hover { opacity: .85; }
+.nlsc-hint { margin-top: 6px; font-size: 11px; color: var(--text2); }
+.nlsc-loading { font-size: 13px; color: var(--text2); padding: 4px 0; }
+.nlsc-error { font-size: 12px; color: #b91c1c; padding: 4px 0; }
+.nlsc-section { margin-top: 8px; }
+.nlsc-requery-btn {
+  margin-top: 10px; padding: 4px 12px; border-radius: 6px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text2); font-size: 12px; cursor: pointer;
+}
+.nlsc-requery-btn:hover { background: var(--accent-light); color: var(--accent); }

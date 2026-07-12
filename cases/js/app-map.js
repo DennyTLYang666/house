@@ -48,6 +48,16 @@ const MapMethods = {
     const map = L.map('map', {
       zoomControl: false,
       zoomAnimation: true,
+      // markerZoomAnimation 維持 false（這是還原回去的設定，不要再改成 true）。
+      // 之前曾試著改成 true 想讓 marker 跟著地圖縮放動畫一起平滑移動，
+      // 但我們的 marker 是用「依價格文字長度動態決定寬度/錨點」的自訂 divIcon
+      // （見 makeIcon() 的 w = label.length > 5 ? ... 、iconAnchor: [w/2, 31]）。
+      // Leaflet 內建的 marker 縮放動畫（_animateZoom）對這種非標準、每顆 icon
+      // 尺寸/錨點都不一樣的 divIcon 處理不穩，疊加 Leaflet.markercluster 自己
+      // 在縮放時也會搬動/重建 marker DOM，兩邊的座標換算互相干擾，
+      // 才會出現「縮小後本來分開的全部定位跑掉」的狀況。
+      // 設為 false 後 marker 在縮放動畫期間直接隱藏、動畫結束才依新 zoom
+      // 重新計算座標顯示，沒有中途換算的問題，定位穩定（也是效能較好的官方建議值）。
       markerZoomAnimation: false,
       preferCanvas: true,
     }).setView([24.97, 121.28], 11);
@@ -141,17 +151,39 @@ const MapMethods = {
       );
     });
 
-    // ── Marker Cluster ──
+    /**
+     * 額外發現的問題（用螢幕錄影逐格分析確認）：
+     * 初始載入（zoom 11）時，桃園市區附近會穩定出現「兩個一模一樣寫著 35
+     * 的紅色圓圈幾乎疊在一起」，而且不是動畫殘影 —— 連續看了 1.5 秒以上的
+     * 多個畫面都還在，是真的同時存在兩個 cluster，不是看錯。
+     *
+     * 檢查過 renderMarkers() / initMap() 的程式碼，clearLayers() 跟 _map
+     * 的 null 防呆都正確，邏輯上不應該重複疊加 marker。最可能的解釋是
+     * Leaflet.markercluster 本身的已知限制：它是用「網格（grid）」分桶來做
+         * 分群，不是真正計算「兩兩距離」，地理位置上明明很近的物件，如果剛好落在
+     * 網格邊界的兩側，就會被分到兩個相鄰但獨立的 cluster，而不會合併成一個
+     * ——這正好同時解釋你最早回報的「群組認定不對」跟「相近物件顯示不好」。
+     *
+     * 暫時的緩解作法：把 zoom<12 時的聚合半徑從 70 提高到 90，降低物件剛好
+     * 落在網格邊界兩側的機率。這是治標、不是根治（網格演算法本身的限制無法
+     * 完全避免），但應該能大幅減少這種「兩個圓疊在一起」的情況。
+     *
+     * 麻煩幫我驗證一下：兩個「35」圓圈，分別點下去，看 Leaflet 自動 zoom 進去
+     * 之後，兩邊各自圈出來的 35 筆物件是「完全一樣」還是「不一樣但彼此緊鄰」？
+     * - 如果兩邊資料一樣 → 是真的重複渲染 bug，我再往這個方向繼續查
+     * - 如果兩邊資料不一樣（只是剛好都是 35 筆）→ 上面的網格邊界解釋成立，
+     *   調高半徑這個方向就是對的，可以再依實際效果微調數字
+     */
     const markerGroup = L.markerClusterGroup({
       maxClusterRadius: (zoom) => {
         if (zoom >= 16) return 1;
         if (zoom >= 14) return 20;
         if (zoom >= 13) return 35;
-        if (zoom >= 12) return 50;
-        return 70;
+        if (zoom >= 12) return 55;
+        return 90;
       },
       disableClusteringAtZoom: 16,
-      spiderfyOnMaxZoom: false,
+      spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
       animateAddingMarkers: false,
@@ -173,18 +205,24 @@ const MapMethods = {
     });
     map.addLayer(markerGroup);
 
-    let lastRenderZoom = map.getZoom();
-    map.on('zoomend', () => {
-      const z = map.getZoom();
-      if (Math.abs(z - lastRenderZoom) >= 2) {
-        lastRenderZoom = z;
-        this.renderMarkers(false);
-      }
+    /**
+     * 回應「縮放時物件定位跑掉」的問題：用 Leaflet.markercluster 官方提供的
+     * refreshClusters() —— 這是專門設計給「需要強制重新計算群組/位置」這個
+     * 情境用的輕量 API，跟我們之前移除的「clearLayers() 整批重建」完全不同：
+     * 它只是請套件「重新核對一次目前的群組計算結果」，不會把 marker 整批
+     * 銷毀重新 new 一次，所以不會關掉使用者打開的 popup、也不會有重建的效能開銷。
+     * 縮放或拖曳結束後呼叫一次，確保畫面跟實際計算結果同步。
+     */
+    map.on('zoomend moveend', () => {
+      markerGroup.refreshClusters();
+      Object.values(this.poiLayerCache || {}).forEach(g => g.refreshClusters());
     });
 
     this._map         = map;
     this._markerGroup = markerGroup;
     this._markerMap   = {};
+
+    this.syncPoiLayers(); // 把已勾選、已快取的圖層重新貼回這個新建立的地圖實例
   },
 
   // ── 渲染所有 Marker ──────────
@@ -192,7 +230,43 @@ const MapMethods = {
     if (!this._map) return;
     this._markerGroup.clearLayers();
     this._markerMap = {};
-    const withGeo = this.filteredData.filter(i => i.lat && i.lng);
+
+    // 案件物件顯示模式：all=全部（預設）／none=不顯示物件／single=只顯示指定一筆
+    let source;
+    if (this.mapObjectMode === 'none') {
+      source = [];
+    } else if (this.mapObjectMode === 'single') {
+      const single = this.filteredData.find(i => i.id === this.mapSingleItemId)
+                  || this.rawData.find(i => i.id === this.mapSingleItemId);
+      source = single ? [single] : [];
+    } else {
+      source = this.filteredData;
+    }
+    const withGeo = source.filter(i => i.lat && i.lng);
+
+    /**
+     * 暫時的除錯檢查（成本很低，留著沒關係）：
+     * 檢查來源資料本身是否有「重複 id」或「座標幾乎一樣但不同物件」的情況。
+     * 如果地圖上看到不該重疊的群組，先看一下 console 有沒有印出這個警告，
+     * 可以最快排除「是不是資料本身就重複/座標重疊」這個最簡單的可能性。
+     */
+    const idSeen = new Set();
+    const coordKeySeen = new Map(); // coordKey -> [案名,...]
+    withGeo.forEach(item => {
+      if (idSeen.has(item.id)) {
+        console.warn('[renderMarkers] 重複 id，同一筆資料被加入兩次：', item.id, item.案名);
+      }
+      idSeen.add(item.id);
+
+      const coordKey = `${item.lat.toFixed(5)},${item.lng.toFixed(5)}`;
+      if (!coordKeySeen.has(coordKey)) coordKeySeen.set(coordKey, []);
+      coordKeySeen.get(coordKey).push(item.案名);
+    });
+    coordKeySeen.forEach((names, key) => {
+      if (names.length > 1) {
+        console.info(`[renderMarkers] 座標完全相同（${key}）的物件共 ${names.length} 筆：`, names);
+      }
+    });
 
     withGeo.forEach(item => {
       const marker = L.marker([item.lat, item.lng], {
@@ -269,7 +343,7 @@ const MapMethods = {
     if (!item) return;
     window.GA?.popupToList(item, this.modeConfig._name);
     this.view = 'table';
-    if (!this.expandedIds.includes(id)) this.expandedIds.push(id);
+    if (this.modeConfig.canViewDetail) this.expandedIds = [id]; // 單選展開，權限不足則不展開
     Vue.nextTick(() => {
       setTimeout(() => {
         const el = document.querySelector(`tr[data-id="${id}"]`);
@@ -294,17 +368,21 @@ const MapMethods = {
     window.GA?.switchView(v, this.modeConfig._name);
     this.view = v;
     if (v === 'map') {
+      // v-show 讓 #map 永遠在 DOM，不需要等 DOM 渲染，nextTick 就夠
       Vue.nextTick(() => {
-        if (this._map) { this._map.invalidateSize(); this.renderMarkers(true); }
-        else { this.initMap(); this.renderMarkers(true); }
+        if (this._map) {
+          this._map.invalidateSize();
+          this.renderMarkers(true);
+          this.syncPoiLayers();
+        } else {
+          this.initMap();
+          this.renderMarkers(true);
+        }
       });
     } else {
-      if (this._map) {
-        this._map.remove();
-        this._map = null;
-        this._markerGroup = null;
-        this._markerMap = {};
-      }
+      // v-show 模式：容器留在 DOM，map instance 也保留（不 remove），
+      // 切回列表時只要停下來就好，回來時 invalidateSize() 即可。
+      // 不再呼叫 this._map.remove()，避免下次切回地圖時容器已被 Leaflet 標記為已使用。
     }
   },
 
@@ -312,10 +390,27 @@ const MapMethods = {
   jumpToMap(item) {
     window.GA?.jumpToMap(item, this.modeConfig._name);
     this.view = 'map';
+    this.mapSingleItemId = item.id;
     Vue.nextTick(() => {
       if (this._map) { this._map.invalidateSize(); this.renderMarkers(false); }
       else { this.initMap(); this.renderMarkers(false); }
       setTimeout(() => this.focusMarker(item), 250);
     });
   },
+
+  // ── 案件物件顯示模式切換：all=全部／none=不顯示物件／single=只顯示指定一筆 ──
+  setMapObjectMode(mode) {
+    this.mapObjectMode = mode;
+    if (this._map) this.renderMarkers(mode !== 'none');
+  },
+
+  // ── 目前「指定物件」模式所指的案名（給 UI 顯示用，沒有則回傳空字串） ──
+  mapSingleItemName() {
+    if (!this.mapSingleItemId) return '';
+    const item = this.rawData.find(i => i.id === this.mapSingleItemId);
+    return item ? item.案名 : '';
+  },
 };
+
+// app-vue.js 用 ...MapMethods 混入，必須掛到 window 才能跨 <script> 標籤存取
+window.MapMethods = MapMethods;

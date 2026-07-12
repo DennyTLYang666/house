@@ -84,14 +84,23 @@
       return n;
     },
 
+    /**
+     * 展開中的 id 集合（Set）。
+     * v-for 每一列都要判斷是否展開，原本用 expandedIds.includes(item.id) 是
+     * O(n) 線性搜尋，列表一多、加上展開列內容變豐富後，每次點擊「詳細」
+     * 都要對全部列重新掃描一次，容易感覺到滑鼠/畫面卡頓。
+     * 改成 Set 後查詢是 O(1)，搭配 detail-box 的 v-once 一起用效果最明顯。
+     */
+    expandedIdSet() { return new Set(this.expandedIds); },
+
     // ── 篩選選項（動態從資料推導）
     cityOptions()      { return [...new Set(this.rawData.map(i => String(i.縣市 || '').trim()))].filter(Boolean).sort(); },
     areaOptions()      { return [...new Set(this.rawData.map(i => String(i.分區 || '').trim()))].filter(Boolean).sort(); },
     villageOptions()   { return [...new Set(this.rawData.map(i => String(i.村里 || '').trim()))].filter(Boolean).sort(); },
     roomOptions()      { return [...new Set(this.rawData.map(i => i.房間數量).filter(Boolean))].sort((a, b) => a - b); },
     directionOptions() { return [...new Set(this.rawData.map(i => i.座向).filter(Boolean))].sort(); },
-    usageOptions()     { return [...new Set(this.rawData.map(i => i.使用分區).filter(Boolean))]; },
-    buildTypeOptions() { return [...new Set(this.rawData.map(i => i.建物型態?.trim()).filter(Boolean))]; },
+    usageOptions()     { return [...new Set(this.rawData.map(i => i.使用分區).filter(Boolean))].sort(); },
+    buildTypeOptions() { return [...new Set(this.rawData.map(i => i.建物型態?.trim()).filter(Boolean))].sort(); },
 
     // ── 主過濾 + 排序
     filteredData() {
@@ -101,16 +110,19 @@
       let data = pool.filter(item => {
         const f = this.filters;
 
+        // specialFilter='expiring' 時只保留即將到期（不疊加任何其他 filter，含關鍵字）
+        // 註：這個判斷必須放在最前面 —— 原本放在關鍵字檢查之後，
+        // 導致「到期提醒」模式底下關鍵字搜尋仍會偷偷生效，跟註解說的「不疊加其他filter」不一致。
+        if (this.specialFilter === 'expiring') {
+          const d = this.contractDaysLeft(item);
+          return d !== null && d <= this.expireWarningDays;
+        }
+
         // 關鍵字
         if (f.keyword) {
           const kw   = f.keyword.toLowerCase();
           const text = `${item.案名} ${item.分區} ${item.地段}`.toLowerCase();
           if (!text.includes(kw)) return false;
-        }
-        // specialFilter='expiring' 時只保留即將到期（不再疊加其他 filter）
-        if (this.specialFilter === 'expiring') {
-          const d = this.contractDaysLeft(item);
-          return d !== null && d <= this.expireWarningDays;
         }
         // 快速 tag
         if (f.quickKey && item[f.quickKey] !== f.quickValue) return false;
@@ -320,12 +332,22 @@
     },
 
     // ── 展開 / 收合詳細列 ─────────
+    // 判斷是否展開（O(1)，取代 expandedIds.includes(id) 的 O(n) 掃描）
+    isExpanded(id) { return this.expandedIdSet.has(id); },
+
     toggleExpand(id) {
-      const idx = this.expandedIds.indexOf(id);
-      if (idx >= 0) {
-        this.expandedIds.splice(idx, 1);
-      } else {
-        this.expandedIds.push(id);
+      // 權限開關：非 staff 模式不可使用「詳細」功能（按鈕本身也已隱藏，這裡再擋一層）
+      if (!this.modeConfig.canViewDetail) return;
+
+      /**
+       * 單選展開（取代原本「可同時展開多列」的陣列 push/splice）。
+       * 之前每點一次「詳細」就會多塞一塊很重的內容到 DOM 裡，且不會自動收掉，
+       * 連續展開幾筆後 DOM 越疊越大，畫面才會越用越卡。
+       * 改成「只允許同時展開一筆」後，DOM 大小固定不會無限累積，
+       * 這是效能問題真正的根因，比單純優化渲染本身更有效。
+       */
+      this.expandedIds = this.expandedIds.includes(id) ? [] : [id];
+      if (this.expandedIds.length) {
         const item = this.rawData.find(i => i.id === id);
         if (item) window.GA?.expandCase(item, this.modeConfig._name);
       }

@@ -39,6 +39,7 @@ const SITE_CONFIG = {
       showPicture:     true,   // true=案名可點擊連至物件圖片頁；false=純文字案名
       showSummaryDetail:   true,
       grade:     true, // 案件等級
+      canViewDetail: true,  // 「詳細」展開功能權限開關 — 只有 staff 可用
 
       // 資料過濾（額外的，ontop of 已售/停賣過濾）
       dataFilter: {
