@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>TikTok 授權完成</title>
+<style>
+  body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background:#111; color:#eee; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; margin:0; padding:20px; text-align:center; }
+  #code-box { font-size:14px; word-break:break-all; background:#222; border:1px solid #444; border-radius:8px; padding:16px; max-width:600px; margin-top:16px; }
+  button { margin-top:16px; padding:10px 20px; font-size:16px; border-radius:6px; border:none; background:#EF9F27; cursor:pointer; }
+  .hint { color:#999; font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+  <h2 id="title">正在讀取授權結果...</h2>
+  <div id="code-box"></div>
+  <button id="copy-btn" style="display:none;">複製授權碼</button>
+  <p class="hint">複製後回終端機貼上,這個分頁可以直接關掉。</p>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const error = params.get("error_description") || params.get("error");
+    const titleEl = document.getElementById("title");
+    const boxEl = document.getElementById("code-box");
+    const btnEl = document.getElementById("copy-btn");
+
+    if (code) {
+      titleEl.textContent = "✅ 授權成功";
+      boxEl.textContent = code;
+      btnEl.style.display = "inline-block";
+      btnEl.onclick = () => {
+        navigator.clipboard.writeText(code);
+        btnEl.textContent = "已複製!";
+      };
+    } else {
+      titleEl.textContent = "❌ 沒有拿到授權碼";
+      boxEl.textContent = error || "未知原因,請回終端機重試。";
+    }
+  </script>
+</body>
+</html>
