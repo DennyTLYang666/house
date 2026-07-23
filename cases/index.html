@@ -884,6 +884,13 @@
                         </button>
                         <div class="nlsc-hint">資料來源：內政部國土測繪中心（免費，即時查詢）</div>
                       </div>
+                      <!-- 國土功能分區圖：各縣市各自劃設、進度不一，無統一 WMS 可套疊，
+                           故連到官方查詢系統讓使用者依縣市自行查詢 -->
+                      <a class="nlsc-query-btn nlsc-zoning-btn"
+                         :href="zoningQueryUrl()" target="_blank" rel="noopener">
+                        🗾 國土功能分區圖查詢（依縣市開啟官方系統）
+                      </a>
+                      <div class="nlsc-hint">資料來源：內政部國土管理署（各縣市進度不同，僅供參考，以縣市政府公告為準）</div>
                       <div v-if="nlscLoading[item.id]" class="nlsc-loading">⏳ 查詢中，請稍候…</div>
                       <div v-if="nlscCache[item.id]">
                         <!-- 查詢失敗 -->

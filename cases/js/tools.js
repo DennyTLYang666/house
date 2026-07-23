@@ -20,11 +20,23 @@
     地籍: [
       { name: '國土測繪地圖', url: 'https://maps.nlsc.gov.tw/T09/mobilemap.action' },
       { name: '地籍圖資查詢', url: 'https://easymap.land.moi.gov.tw/' },
+      { name: '地籍圖資網路便民服務查詢', url: 'https://easymap.moi.gov.tw/Index' },
       { name: '地號查詢系統', url: 'https://www.land.moi.gov.tw/chhtml/landquery.asp' },
-      { name: '新舊地建號查詢', url: 'https://www.land.tycg.gov.tw/chaspx/SQry4.aspx/14' },
       { name: '土地段名代碼暨詮釋資料查詢系統', url: 'https://lisp.land.moi.gov.tw/MMS/MMSpage.aspx#gobox01' },
+    ],
+    工具: [
+      { name: '新舊地建號查詢', url: 'https://www.land.tycg.gov.tw/chaspx/SQry4.aspx/14' },
+      { name: '公告土地現值及地價查詢', url: 'https://www.land.moi.gov.tw/chhtml/landvalue/42' },
+    ],
+    都市計畫: [
       { name: '桃園市政府都市計畫', url: 'https://urplanning.tycg.gov.tw/gisMap/Map.aspx' },
+      { name: '內政部國土管理署-國土功能分區資訊系統', url: 'https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
+    ],
+    使用分區: [
+      { name: '全國土地使用分區資料查詢系統', url: 'https://luz.nlma.gov.tw/web/' },
       { name: '桃園市政府土地使用分區線上查詢', url: 'https://landuse.tycg.gov.tw/Sys/QueryLandUse/QueryLandUse.aspx' },
+    ],
+    知識: [
       { name: '國土功能分區懶人包', url: 'https://landplan.nantou.gov.tw/NTOU/upload/news/20220223145139_%E5%9C%8B%E5%9C%9F%E5%8A%9F%E8%83%BD%E5%88%86%E5%8D%80%E6%87%B6%E4%BA%BA%E5%8C%85.pdf' },
     ],
     估價稅務: [
@@ -34,18 +46,20 @@
     ],
     法規查詢: [
       { name: '全國法規資料庫', url: 'https://law.moj.gov.tw/' },
-      { name: '桃園市都市計畫', url: 'https://gis.tycg.gov.tw/tycgmaps/' },
-      { name: '使用分區查詢', url: 'https://urban.tycg.gov.tw/' },
     ],
     地圖工具: [
       { name: 'Google 地圖', url: 'https://maps.google.com/' },
-      { name: '航照圖（國土）', url: 'https://maps.nlsc.gov.tw/' },
       { name: 'Google 街景', url: 'https://www.google.com/maps/@?api=1&map_action=pano' },
       { name: '門牌位置', url: 'https://addressrs.moi.gov.tw/address/index.cfm' },
       { name: '地址轉座標', url: 'https://map.tgos.tw/TGOSCloudMap?addr=' },
+      { name: '宜蘭在地生活MAP', url: 'https://lifemap.e-land.gov.tw/yimap/' },
     ],
     租屋: [
       { name: '內政部租金查詢系統', url: 'https://moisagis.moi.gov.tw/rent/' },
+    ],
+    待移除: [
+      { name: '桃園市都市計畫', url: 'https://gis.tycg.gov.tw/tycgmaps/' },
+      { name: '使用分區查詢', url: 'https://urban.tycg.gov.tw/' },
     ],
   };
 

@@ -111,6 +111,27 @@
       L.control.layers(baseLayers, overlayLayers, { position: 'topright', collapsed: true }).addTo(map);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+      // 地址搜尋框（Nominatim / OpenStreetMap 地理編碼，免申請、免金鑰）
+      const searchBox = L.control({ position: 'topleft' });
+      searchBox.onAdd = () => {
+        const div = document.createElement('div');
+        div.className = 'addr-search-box';
+        div.innerHTML = `
+          <input type="text" class="addr-search-input" placeholder="搜尋地址…" />
+          <button class="addr-search-btn" title="搜尋地址">🔍</button>
+        `;
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
+        const input = div.querySelector('input');
+        const btn   = div.querySelector('button');
+        this._addrSearchBtn = btn;
+        const doSearch = () => this.searchAddress(input.value);
+        btn.addEventListener('click', doSearch);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+        return div;
+      };
+      searchBox.addTo(map);
+
       // 定位按鈕
       const locBtn = document.createElement('button');
       locBtn.className = 'locate-btn';
@@ -289,6 +310,44 @@
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
       });
+    },
+
+    // ── 地址搜尋（Nominatim 地理編碼，限定台灣） ──
+    async searchAddress(query) {
+      const q = (query || '').trim();
+      if (!q) return;
+      if (!this._map) return;
+      window.GA?.search(q, this.modeConfig._name);
+
+      if (this._addrSearchBtn) this._addrSearchBtn.classList.add('searching');
+      try {
+        const url = `https://nominatim.openstreetmap.org/search`
+          + `?format=json&countrycodes=tw&limit=1&q=${encodeURIComponent(q)}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('搜尋服務暫時無法使用');
+        const results = await resp.json();
+        if (!results.length) {
+          alert('查無此地址，請換個關鍵字再試（例如加上縣市/區）');
+          return;
+        }
+        const { lat, lon, display_name } = results[0];
+        const target = [parseFloat(lat), parseFloat(lon)];
+
+        if (this._addrSearchMarker) this._addrSearchMarker.remove();
+        this._addrSearchMarker = L.marker(target, {
+          icon: L.divIcon({
+            html: '<div class="addr-search-pin">📍</div>',
+            className: '', iconSize: [30, 30], iconAnchor: [15, 30],
+          }),
+        }).addTo(this._map).bindPopup(display_name);
+
+        this._map.flyTo(target, 17, { animate: true, duration: 0.8 });
+        this._map.once('moveend', () => this._addrSearchMarker.openPopup());
+      } catch (e) {
+        alert('地址搜尋失敗：' + e.message);
+      } finally {
+        if (this._addrSearchBtn) this._addrSearchBtn.classList.remove('searching');
+      }
     },
 
     // ── Google 導航 ───────────────────────

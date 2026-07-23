@@ -112,6 +112,27 @@ const MapMethods = {
     L.control.layers(baseLayers, overlayLayers, { position: 'topright', collapsed: true }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+    // ── 地址搜尋框（Nominatim / OpenStreetMap 地理編碼，免申請、免金鑰） ──
+    const searchBox = L.control({ position: 'topleft' });
+    searchBox.onAdd = () => {
+      const div = document.createElement('div');
+      div.className = 'addr-search-box';
+      div.innerHTML = `
+        <input type="text" class="addr-search-input" placeholder="搜尋地址…" />
+        <button class="addr-search-btn" title="搜尋地址">🔍</button>
+      `;
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+      const input = div.querySelector('input');
+      const btn   = div.querySelector('button');
+      this._addrSearchBtn = btn;
+      const doSearch = () => this.searchAddress(input.value);
+      btn.addEventListener('click', doSearch);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+      return div;
+    };
+    searchBox.addTo(map);
+
     // ── 定位按鈕 ──
     const locBtn = document.createElement('button');
     locBtn.className = 'locate-btn';
@@ -350,6 +371,85 @@ const MapMethods = {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     });
+  },
+
+  // ── 地址搜尋（Nominatim 地理編碼，限定台灣） ──
+  // OSM 在台灣的門牌（精確到號）資料常常不完整，直接查完整地址容易撲空，
+  // 所以查不到就自動放寬條件重試：完整地址 → 去掉門牌號 → 去掉巷弄 → 只留路名/區。
+  // ── 小提示（右下角自動淡出，取代 alert 阻斷式彈窗） ──
+  showMapToast(message, type = 'info') {
+    if (!this._map) return;
+    const container = this._map.getContainer();
+    if (this._toastEl) { this._toastEl.remove(); clearTimeout(this._toastTimer); }
+    const toast = document.createElement('div');
+    toast.className = `map-toast map-toast-${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    this._toastEl = toast;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    this._toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3200);
+  },
+
+  _addressFallbacks(q) {
+    const variants = [q];
+    const noNumber = q.replace(/\d+(?:之\d+)?號.*$/, '');           // 去掉「OO號」及後面
+    if (noNumber && noNumber !== q) variants.push(noNumber);
+    const noLaneAlley = noNumber.replace(/\d+(巷|弄)$/, '');          // 再去掉巷/弄
+    if (noLaneAlley && noLaneAlley !== noNumber) variants.push(noLaneAlley);
+    return [...new Set(variants)].filter(Boolean);
+  },
+
+  async _geocode(q) {
+    const url = `https://nominatim.openstreetmap.org/search`
+      + `?format=json&countrycodes=tw&limit=1&q=${encodeURIComponent(q)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('搜尋服務暫時無法使用');
+    return resp.json();
+  },
+
+  async searchAddress(query) {
+    const q = (query || '').trim();
+    if (!q || !this._map) return;
+    window.GA?.search(q, this.modeConfig._name);
+
+    if (this._addrSearchBtn) this._addrSearchBtn.classList.add('searching');
+    try {
+      const variants = this._addressFallbacks(q);
+      let results = [];
+      let matchedQuery = q;
+      for (const v of variants) {
+        results = await this._geocode(v);
+        if (results.length) { matchedQuery = v; break; }
+      }
+      if (!results.length) {
+        this.showMapToast('查無此地址，請換個關鍵字再試（例如加上縣市/區，或先不要輸入門牌號）', 'warn');
+        return;
+      }
+      const { lat, lon, display_name } = results[0];
+      const target = [parseFloat(lat), parseFloat(lon)];
+
+      if (this._addrSearchMarker) this._addrSearchMarker.remove();
+      this._addrSearchMarker = L.marker(target, {
+        icon: L.divIcon({
+          html: '<div class="addr-search-pin">📍</div>',
+          className: '', iconSize: [30, 30], iconAnchor: [15, 30],
+        }),
+      }).addTo(this._map).bindPopup(display_name);
+
+      this._map.flyTo(target, matchedQuery !== q ? 15 : 17, { animate: true, duration: 0.8 });
+      this._map.once('moveend', () => this._addrSearchMarker.openPopup());
+
+      if (matchedQuery !== q) {
+        this.showMapToast(`找不到完整門牌，已定位到「${matchedQuery}」附近，請自行核對`, 'warn');
+      }
+    } catch (e) {
+      this.showMapToast('地址搜尋失敗：' + e.message, 'error');
+    } finally {
+      if (this._addrSearchBtn) this._addrSearchBtn.classList.remove('searching');
+    }
   },
 
   // ── Google 導航 ───────────────

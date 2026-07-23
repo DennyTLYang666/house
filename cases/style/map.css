@@ -1091,3 +1091,65 @@ tr.row-sold .title-link { color: #9ca3af !important; pointer-events: none; }
   color: var(--text2); font-size: 12px; cursor: pointer;
 }
 .nlsc-requery-btn:hover { background: var(--accent-light); color: var(--accent); }
+.nlsc-zoning-btn { margin-top: 10px; background: #0f766e; text-decoration: none; }
+
+/* ══════════════════════════════
+   地圖 — 地址搜尋框
+══════════════════════════════ */
+.addr-search-box {
+  display: flex;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 5px rgba(0,0,0,.3);
+  overflow: hidden;
+  margin: 10px 0 0 10px;
+}
+.addr-search-input {
+  border: none;
+  outline: none;
+  padding: 8px 10px;
+  font-size: 13px;
+  width: 180px;
+  font-family: inherit;
+}
+.addr-search-btn {
+  border: none;
+  background: #f4f4f4;
+  width: 38px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background .15s;
+}
+.addr-search-btn:hover { background: #e6e6e6; }
+.addr-search-btn.searching { animation: locate-spin 1s linear infinite; pointer-events: none; }
+@media (max-width: 640px) {
+  .addr-search-input { width: 130px; }
+}
+
+/* ══════════════════════════════
+   地圖 — 角落小提示（自動淡出）
+══════════════════════════════ */
+.map-toast {
+  position: absolute;
+  top: 56px;
+  left: 14px;
+  z-index: 1200;
+  max-width: 260px;
+  background: rgba(30,32,38,.92);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+}
+.map-toast.show { opacity: 1; transform: translateY(0); }
+.map-toast-warn  { background: rgba(146,64,14,.94); }
+.map-toast-error { background: rgba(153,27,27,.94); }
+@media (max-width: 640px) {
+  .map-toast { max-width: 200px; font-size: 11.5px; }
+}
