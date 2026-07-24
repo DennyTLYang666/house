@@ -96,7 +96,14 @@ const MapMethods = {
       ),
     };
 
-    // 疊加圖層
+    // 疊加圖層 — 桃園市政府 ArcGIS Server（TY_UPGIS），僅涵蓋桃園市轄區
+    const TY_SDE  = 'https://uparcgis.tycg.gov.tw/server/rest/services/TY_UPGIS/TYMap_SDE/MapServer';
+    const TY_MORE = 'https://uparcgis.tycg.gov.tw/server/rest/services/TY_UPGIS/TYMapV_more/MapServer';
+    const tyLayer = (url, id, opacity = 0.7) => L.esri.dynamicMapLayer({
+      url, layers: [id], format: 'png8', transparent: true, opacity,
+      attribution: '© 桃園市政府',
+    });
+
     const overlayLayers = {
       '📐 地籍圖': L.tileLayer.wms('https://wms.nlsc.gov.tw/wms', {
         layers: 'LANDSECT',
@@ -106,6 +113,21 @@ const MapMethods = {
         opacity: 0.9,
         attribution: '© 內政部國土測繪中心',
       }),
+      // 地號標示（全國性，內政部國土管理署，非桃園限定）
+      '🔢 地號（全國）': L.tileLayer(
+          'https://wmts.nlsc.gov.tw/wmts/CADASTRAL/default/GoogleMapsCompatible/{z}/{y}/{x}',
+          { maxZoom: 20, opacity: 0.9, attribution: '© 內政部國土測繪中心' }
+      ),
+      // 國土功能分區（國土計畫法劃設）
+      '🗾 國土功能分區（桃園）': tyLayer(TY_MORE, 73),
+      // 都市計畫（都市計畫法劃設，與國土功能分區是兩套不同制度，兩者可能同時存在）
+      '🏙️ 都市計畫使用分區（桃園）': tyLayer(TY_SDE, 2),
+      '🗺️ 都市計畫區範圍（桃園）': tyLayer(TY_SDE, 22),
+      // 非都市土地（區域計畫法劃設）
+      '🌾 非都市土地使用分區（桃園）': tyLayer(TY_SDE, 23),
+      '🌱 非都市土地使用地（桃園）': tyLayer(TY_SDE, 24),
+      // 行政區界（幫助辨位，不透明度拉高一點）
+      '🧭 行政區界（桃園）': tyLayer(TY_MORE, 74, 1),
     };
 
     baseLayers['🗺️ 街道圖'].addTo(map);

@@ -41,6 +41,7 @@
     ],
     估價稅務: [
       { name: '實價登錄查詢', url: 'https://lvr.land.moi.gov.tw' },
+      { name: '591實價登錄', url: 'https://land.591.com.tw/price' },
       { name: '地價查詢', url: 'https://pip.moi.gov.tw/V3/E/SCRE0201.aspx' },
       { name: '財政部電子申報', url: 'https://www.etax.nat.gov.tw/' },
     ],
