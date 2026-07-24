@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>實登查詢分析｜小楊說房</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4/build/index.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+  :root{
+    --paper:#F1EEE4;
+    --card:#FBFAF6;
+    --ink:#262320;
+    --ink-soft:#6B6559;
+    --seal:#A6321F;
+    --seal-soft:#A6321F1a;
+    --jade:#3C6255;
+    --jade-soft:#3C62551a;
+    --gold:#AD8A3F;
+    --gold-soft:#AD8A3F22;
+    --line:#DDD6C5;
+    --line-strong:#C8C0AA;
+    --radius:10px;
+    --topbar-h:66px; /* 預設值，實際高度會用 JS（ResizeObserver）動態校正，避免 topbar 換行時跟側欄疊到 */
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans TC',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  ::selection{background:var(--seal-soft);}
+  .mono{font-family:'IBM Plex Mono','Noto Sans TC',monospace;}
+  .serif{font-family:'Noto Serif TC',serif;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:18px;
+    padding:16px 28px; border-bottom:1px solid var(--line-strong);
+    background:var(--paper);
+    position:sticky; top:0; z-index:20;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand .title{font-family:'Noto Serif TC',serif; font-weight:900; font-size:22px; letter-spacing:.04em;}
+  .brand .sub{font-size:12px; color:var(--ink-soft); letter-spacing:.08em;}
+  .topbar .spacer{flex:1;}
+  .source-controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  select, input[type=text], input[type=number]{
+    font-family:'Noto Sans TC',sans-serif;
+    background:var(--card);
+    border:1px solid var(--line-strong);
+    border-radius:6px;
+    padding:7px 10px;
+    color:var(--ink);
+    font-size:13px;
+  }
+  .btn{
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:6px;
+    padding:7px 14px;
+    font-size:13px;
+    cursor:pointer;
+    font-family:'Noto Sans TC',sans-serif;
+    transition:opacity .15s;
+  }
+  .btn:hover{opacity:.8;}
+  .btn.ghost{background:transparent; color:var(--ink); border-color:var(--line-strong);}
+  .btn.ghost.active{background:var(--seal); color:#FBFAF6; border-color:var(--seal);}
+  .btn.seal{background:var(--seal); border-color:var(--seal); color:#FBFAF6;}
+  .btn:disabled{opacity:.35; cursor:not-allowed;}
+  .file-btn{position:relative; overflow:hidden;}
+  .file-btn input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer;}
+
+  .status-pill{
+    font-size:12px; padding:4px 10px; border-radius:20px;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .status-pill.ok{background:var(--jade-soft); color:var(--jade);}
+  .status-pill.busy{background:var(--gold-soft); color:var(--gold);}
+  .status-pill.err{background:var(--seal-soft); color:var(--seal);}
+  .dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:290px; flex-shrink:0;
+    padding:20px 20px 60px;
+    border-right:1px solid var(--line-strong);
+    position:sticky;
+    top:var(--topbar-h, 66px);
+    max-height:calc(100vh - var(--topbar-h, 66px));
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  /* 篩選欄的獨立捲軸，配合整體色系做細一點的樣式 */
+  .sidebar::-webkit-scrollbar{width:8px;}
+  .sidebar::-webkit-scrollbar-track{background:transparent;}
+  .sidebar::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:4px;}
+  .sidebar::-webkit-scrollbar-thumb:hover{background:var(--ink-soft);}
+  .sidebar{scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent;}
+  .main{flex:1; padding:24px 28px 60px; min-width:0;}
+
+  .filter-section{margin-bottom:22px; padding-bottom:18px; border-bottom:1px solid var(--line);}
+  .filter-section:last-child{border-bottom:none;}
+  .filter-label{
+    font-family:'Noto Serif TC',serif; font-weight:700; font-size:13px;
+    letter-spacing:.06em; color:var(--ink); margin-bottom:10px; display:block;
+  }
+  .quick-tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
+  .quick-tab{
+    font-size:12px; padding:5px 10px; border-radius:20px;
+    border:1px solid var(--line-strong); background:var(--card); cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .quick-tab.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+  .check-list{max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding-right:4px;}
+  .check-item{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-soft);}
+  .check-item input{accent-color:var(--seal);}
+  .check-item.emph{color:var(--ink); font-weight:500;}
+  .range-row{display:flex; align-items:center; gap:8px; margin-top:4px;}
+  .range-row input{width:100%;}
+  .range-row .to{font-size:12px; color:var(--ink-soft);}
+  .hint{font-size:11px; color:var(--ink-soft); margin-top:5px; line-height:1.5;}
+  .toggle-row{display:flex; align-items:center; gap:8px; font-size:13px; margin-top:6px;}
+  .toggle-row input{accent-color:var(--seal);}
+
+  /* ---------- Stat cards ---------- */
+  .stat-row{display:flex; gap:16px; margin-bottom:22px; flex-wrap:wrap; align-items:stretch;}
+  .stat-card{
+    flex:1; min-width:140px;
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px 18px;
+  }
+  .stat-card .label{font-size:12px; color:var(--ink-soft); letter-spacing:.04em; margin-bottom:6px;}
+  .stat-card .value{font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600;}
+  .stat-card .value .unit{font-size:13px; color:var(--ink-soft); margin-left:3px;}
+  .stat-group{min-width:220px;}
+  .stat-group-body{display:flex; flex-direction:column; gap:8px;}
+  .stat-sub{display:flex; align-items:baseline; justify-content:space-between; gap:12px;}
+  .stat-sub .sub-label{font-size:11px; color:var(--ink-soft); flex-shrink:0;}
+  .stat-sub .sub-value{font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:600;}
+
+  .seal-stamp{
+    width:118px; height:118px; border-radius:50%;
+    border:3px solid var(--seal); color:var(--seal);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transform:rotate(-6deg);
+    flex-shrink:0;
+    background:var(--seal-soft);
+  }
+  .seal-stamp .n{font-family:'Noto Serif TC',serif; font-weight:900; font-size:26px; line-height:1;}
+  .seal-stamp .t{font-size:10px; letter-spacing:.15em; margin-top:5px;}
+
+  /* ---------- Chart cards（單欄顯示） ---------- */
+  .chart-list{display:flex; flex-direction:column; gap:16px; margin-bottom:6px;}
+  .chart-card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:18px 20px;
+  }
+  .chart-card h3{
+    font-family:'Noto Serif TC',serif; font-size:14px; font-weight:700;
+    margin:0 0 12px; letter-spacing:.03em;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .chart-card h3 select{font-size:12px; padding:3px 7px;}
+  .chart-wrap{height:280px; position:relative;}
+  .heatmap-wrap{height:480px; border-radius:8px; overflow:hidden; border:1px solid var(--line);}
+  .leaflet-container{font-family:'Noto Sans TC',sans-serif;}
+
+  /* ---------- 圖表顯示切換 ---------- */
+  .chart-toggle-row{
+    display:flex; flex-wrap:wrap; align-items:center; gap:14px;
+    margin-bottom:16px; padding:12px 16px;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    font-size:13px;
+  }
+  .chart-toggle-row .label{color:var(--ink-soft); font-size:12px; letter-spacing:.04em; flex-shrink:0;}
+  .chart-toggle{display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;}
+  .chart-toggle input{accent-color:var(--seal); cursor:pointer;}
+
+  /* ---------- Table ---------- */
+  .table-card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:18px 20px;
+  }
+  .table-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;}
+  .table-head h3{font-family:'Noto Serif TC',serif; font-size:14px; font-weight:700; margin:0;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  thead th{
+    text-align:left; padding:8px 10px; border-bottom:2px solid var(--ink);
+    font-weight:500; color:var(--ink-soft); white-space:nowrap; position:sticky; top:0; background:var(--card);
+  }
+  tbody td{padding:7px 10px; border-bottom:1px solid var(--line); white-space:nowrap; font-family:'IBM Plex Mono',monospace;}
+  tbody td.text{font-family:'Noto Sans TC',sans-serif;}
+  tbody tr:hover{background:var(--paper);}
+  .table-scroll{overflow-x:auto; max-height:480px; overflow-y:auto; border:1px solid var(--line); border-radius:6px;}
+  .pager{display:flex; align-items:center; gap:10px; margin-top:12px; font-size:13px;}
+
+  .empty-state{
+    text-align:center; padding:60px 20px; color:var(--ink-soft);
+  }
+  .empty-state .serif{font-size:18px; color:var(--ink); display:block; margin-bottom:8px;}
+
+  @media (max-width: 860px){
+    .layout{flex-direction:column;}
+    .sidebar{
+      width:100%; border-right:none; border-bottom:1px solid var(--line-strong);
+      position:static; top:auto; max-height:none; overflow-y:visible;
+    }
+    .main{padding:18px 16px 44px;}
+    .topbar{padding:12px 16px;}
+    .stat-row, .chart-list{gap:12px;}
+    .chart-wrap{height:200px;}
+    .heatmap-wrap{height:340px;}
+  }
+  @media (max-width: 480px){
+    .brand .sub{display:none;}
+    .source-controls{width:100%;}
+    .source-controls .hint{width:100%; order:3;}
+    .stat-card, .stat-group{min-width:0; width:100%;}
+    .seal-stamp{width:96px; height:96px;}
+    .chart-card{min-width:0; padding:14px 14px 10px;}
+    table{font-size:12px;}
+  }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{
+    outline:2px solid var(--seal); outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar" ref="topbarEl">
+    <div class="brand">
+      <span class="title">實登查詢分析</span>
+      <span class="sub mono">小楊說房・純前端 DuckDB-Wasm</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="source-controls">
+      <label class="btn ghost file-btn">
+        上傳 Parquet
+        <input type="file" accept=".parquet" @change="onFileUpload" :disabled="loading">
+      </label>
+      <span v-if="cachedFileName" class="hint mono" style="align-self:center;">
+        本機快取：{{ cachedFileName }}（{{ fmtCacheTime(cachedSavedAt) }}）
+        <a href="#" @click.prevent="clearCache" style="margin-left:6px; text-decoration:underline;">清除快取</a>
+      </span>
+      <span class="status-pill" :class="statusClass">
+        <span class="dot"></span>{{ statusText }}
+      </span>
+    </div>
+  </div>
+
+  <div class="layout" v-if="dataLoaded">
+    <aside class="sidebar">
+
+      <div class="filter-section" v-if="filterOptions.counties.length > 1">
+        <span class="filter-label">縣市</span>
+        <div class="check-list">
+          <label class="check-item" v-for="c in filterOptions.counties" :key="c">
+            <input type="checkbox" :value="c" v-model="filters.counties"> {{ c }}
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">交易標的</span>
+        <div class="quick-tabs">
+          <span class="quick-tab" :class="{active: isQuickTarget(['無車位','有車位'])}" @click="setTargets(['無車位','有車位'])">一般房屋買賣</span>
+          <span class="quick-tab" :class="{active: isQuickTarget(['土地'])}" @click="setTargets(['土地'])">土地</span>
+          <span class="quick-tab" :class="{active: isQuickTarget(['建物'])}" @click="setTargets(['建物'])">建物（未確認是否預售）</span>
+          <span class="quick-tab" :class="{active: isQuickTarget(filterOptions.targets)}" @click="setTargets(filterOptions.targets)">全部</span>
+        </div>
+        <div class="check-list">
+          <label class="check-item" v-for="t in filterOptions.targets" :key="t">
+            <input type="checkbox" :value="t" v-model="filters.targets"> {{ t }}
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section" v-if="filterOptions.districts.length">
+        <span class="filter-label">鄉鎮市區</span>
+        <div class="check-list">
+          <label class="check-item" v-for="d in filterOptions.districts" :key="d">
+            <input type="checkbox" :value="d" v-model="filters.districts"> {{ d }}
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section" v-if="filterOptions.zones.length">
+        <span class="filter-label">重劃區</span>
+        <div class="check-list">
+          <label class="check-item" v-for="z in filterOptions.zones" :key="z">
+            <input type="checkbox" :value="z" v-model="filters.zones"> {{ z }}
+          </label>
+        </div>
+        <div class="hint">依 common_zone_rules.json 的地段規則自動判斷，沒對到規則的交易不會出現在這裡</div>
+      </div>
+
+      <div class="filter-section" v-if="filterOptions.buildingTypes.length">
+        <span class="filter-label">建物型態</span>
+        <div class="check-list">
+          <label class="check-item" v-for="b in filterOptions.buildingTypes" :key="b">
+            <input type="checkbox" :value="b" v-model="filters.buildingTypes"> {{ b }}
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section" v-if="floorCol && filterOptions.floors.length">
+        <span class="filter-label">移轉層次</span>
+        <div class="check-list">
+          <label class="check-item" v-for="fl in filterOptions.floors" :key="fl">
+            <input type="checkbox" :value="fl" v-model="filters.floors"> {{ fl }}
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section" v-if="totalFloorCol && filterOptions.totalFloorMax > 0">
+        <span class="filter-label">總樓層數</span>
+        <div class="range-row">
+          <input type="number" v-model.number="filters.totalFloorMin" :min="0">
+          <span class="to">至</span>
+          <input type="number" v-model.number="filters.totalFloorMax" :min="0">
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">交易年</span>
+        <div class="range-row">
+          <input type="number" v-model.number="filters.yearMin" :min="curYearMin" :max="curYearMax">
+          <span class="to">至</span>
+          <input type="number" v-model.number="filters.yearMax" :min="curYearMin" :max="curYearMax">
+        </div>
+        <div class="hint">資料範圍：{{ curYearMin }} - {{ curYearMax }}</div>
+        <div class="toggle-row" style="margin-top:8px; gap:6px;">
+          <button type="button" class="btn ghost" :class="{ active: yearMode==='ad' }" style="flex:1; padding:6px 8px; font-size:12px;" @click="yearMode='ad'">交易年</button>
+          <button type="button" class="btn ghost" :class="{ active: yearMode==='rolling' }" style="flex:1; padding:6px 8px; font-size:12px;" @click="yearMode='rolling'">交易年度</button>
+        </div>
+        <div class="hint">交易年＝日曆年（1/1~12/31）；交易年度＝以今天為基準往前推算的滾動 12 個月。切換會重新查詢下方 4 張箱型圖</div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">總價（萬元）</span>
+        <div class="range-row">
+          <input type="number" v-model.number="filters.totalPriceMin" :min="0">
+          <span class="to">至</span>
+          <input type="number" v-model.number="filters.totalPriceMax" :min="0">
+        </div>
+        <div class="hint">資料範圍：{{ fmtAuto(filterOptions.totalPriceMin) }} - {{ fmtAuto(filterOptions.totalPriceMax) }}</div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">單價指標</span>
+        <select v-model="filters.metric" @change="onMetricChange" style="width:100%">
+          <option value="純單價">純單價（每坪，全類型可比）</option>
+          <option value="每坪單價">每坪單價（僅建物適用）</option>
+        </select>
+        <div class="range-row">
+          <input type="number" v-model.number="filters.unitPriceMin" :min="0">
+          <span class="to">至</span>
+          <input type="number" v-model.number="filters.unitPriceMax" :min="0">
+        </div>
+        <div class="hint">單位：元／坪，資料範圍：{{ fmtPriceShort(filterOptions.unitPriceMin) }} - {{ fmtPriceShort(filterOptions.unitPriceMax) }}</div>
+      </div>
+
+      <div class="filter-section" v-if="filterOptions.areaMax > 0">
+        <span class="filter-label">建物坪數</span>
+        <div class="range-row">
+          <input type="number" v-model.number="filters.areaMin" :min="0">
+          <span class="to">至</span>
+          <input type="number" v-model.number="filters.areaMax" :min="0">
+        </div>
+      </div>
+
+      <div class="filter-section" v-if="filterOptions.landAreaMax > 0">
+        <span class="filter-label">土地坪數</span>
+        <div class="range-row">
+          <input type="number" v-model.number="filters.landAreaMin" :min="0">
+          <span class="to">至</span>
+          <input type="number" v-model.number="filters.landAreaMax" :min="0">
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">關鍵字</span>
+        <input type="text" v-model.trim="filters.keyword" placeholder="門牌／地號／建案名稱" style="width:100%">
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">資料品質</span>
+        <div class="toggle-row">
+          <input type="checkbox" id="ex" v-model="filters.excludeAbnormal"><label for="ex">排除標記為異常／低參考性資料</label>
+        </div>
+        <div class="hint">目前資料共標記 {{ excludedCount }} 筆為低參考性（如親友間交易、特殊情況等）</div>
+      </div>
+
+      <button class="btn ghost" style="width:100%" @click="resetFilters">重設篩選條件</button>
+    </aside>
+
+    <main class="main">
+
+      <div class="stat-row">
+        <div class="seal-stamp">
+          <span class="n mono">{{ fmtInt(summary.count) }}</span>
+          <span class="t">符合筆數</span>
+        </div>
+        <div class="stat-card stat-group">
+          <div class="label">總價</div>
+          <div class="stat-group-body">
+            <div class="stat-sub">
+              <span class="sub-label">中位數</span>
+              <span class="sub-value">{{ fmtAuto(summary.medTotal) }}</span>
+            </div>
+            <div class="stat-sub">
+              <span class="sub-label">均值</span>
+              <span class="sub-value">{{ fmtAuto(summary.avgTotal) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card stat-group">
+          <div class="label">{{ filters.metric }}</div>
+          <div class="stat-group-body">
+            <div class="stat-sub">
+              <span class="sub-label">中位數</span>
+              <span class="sub-value">{{ fmtPriceAuto(summary.medUnit) }}</span>
+            </div>
+            <div class="stat-sub">
+              <span class="sub-label">均值</span>
+              <span class="sub-value">{{ fmtPriceAuto(summary.avgUnit) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-toggle-row">
+        <span class="label">顯示圖表</span>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.trend"> {{ filters.metric }}走勢</label>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.total"> 總價分布</label>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.buildingArea"> 建物坪數分布</label>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.landArea"> 土地坪數分布</label>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.byType"> 建物型態分布</label>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.byLocation"> 土地位置分布</label>
+        <label class="chart-toggle"><input type="checkbox" v-model="chartVisibility.heatmap"> 地區熱力圖</label>
+      </div>
+
+      <div class="chart-list">
+        <div class="chart-card" v-if="chartVisibility.trend">
+          <h3>{{ filters.metric }}走勢（依{{ yearMode==='rolling' ? '交易年度' : '交易年' }}・箱型圖）</h3>
+          <div class="chart-wrap"><canvas ref="trendCanvas"></canvas></div>
+        </div>
+        <div class="chart-card" v-if="chartVisibility.total">
+          <h3>總價分布（依{{ yearMode==='rolling' ? '交易年度' : '交易年' }}・箱型圖）</h3>
+          <div class="chart-wrap"><canvas ref="totalCanvas"></canvas></div>
+        </div>
+        <div class="chart-card" v-if="chartVisibility.buildingArea">
+          <h3>建物坪數分布（依{{ yearMode==='rolling' ? '交易年度' : '交易年' }}・箱型圖）</h3>
+          <div class="chart-wrap"><canvas ref="buildingAreaCanvas"></canvas></div>
+        </div>
+        <div class="chart-card" v-if="chartVisibility.landArea">
+          <h3>土地坪數分布（依{{ yearMode==='rolling' ? '交易年度' : '交易年' }}・箱型圖）</h3>
+          <div class="chart-wrap"><canvas ref="landAreaCanvas"></canvas></div>
+        </div>
+        <div class="chart-card" v-if="chartVisibility.byType">
+          <h3>建物型態分布</h3>
+          <div class="chart-wrap"><canvas ref="typeCanvas"></canvas></div>
+        </div>
+        <div class="chart-card" v-if="chartVisibility.byLocation">
+          <h3>土地位置分布（前 15 熱門地點）</h3>
+          <div class="chart-wrap"><canvas ref="locationCanvas"></canvas></div>
+        </div>
+        <div class="chart-card" v-if="chartVisibility.heatmap">
+          <h3>
+            地區熱力圖（依地段彙總，尚未收錄座標的地段退回行政區中心點）
+            <span class="toggle-row" style="margin:0; gap:4px;">
+              <button type="button" class="btn ghost" :class="{ active: heatMetric==='count' }" style="padding:4px 10px; font-size:12px;" @click="heatMetric='count'">成交量</button>
+              <button type="button" class="btn ghost" :class="{ active: heatMetric==='price' }" style="padding:4px 10px; font-size:12px;" @click="heatMetric='price'">{{ filters.metric }}</button>
+            </span>
+          </h3>
+          <div class="heatmap-wrap" ref="heatMapEl"></div>
+          <div class="hint" style="margin-top:8px;">
+            資料只有門牌文字、沒有經緯度，地段直接用「土地位置」欄位本身，優先用「地段」座標表定位，
+            還沒補座標的地段先退回所在行政區的概略中心點。
+            <span v-if="heatUnmappedCount > 0">其中 {{ fmtInt(heatUnmappedCount) }} 筆交易連行政區座標都沒有，未顯示在地圖上。</span>
+          </div>
+          <details v-if="heatSectionCandidates.length" style="margin-top:8px;">
+            <summary style="cursor:pointer; font-size:12px; color:var(--ink-soft);">
+              目前有 {{ heatSectionCandidates.length }} 個地段還沒有精確座標（依成交量排序），點這裡看要補哪些
+            </summary>
+            <div class="hint" style="margin-top:6px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <span>複製下面整段，貼到檔案裡的 <code>TW_SECTION_CENTROIDS</code>，把 [0, 0] 換成該地段的實際經緯度即可：</span>
+              <button type="button" class="btn ghost" style="padding:4px 10px; font-size:12px; flex-shrink:0;" @click="copySectionSnippet">
+                {{ sectionSnippetCopied ? '已複製' : '複製' }}
+              </button>
+            </div>
+            <pre style="margin-top:6px; padding:10px; background:var(--paper); border:1px solid var(--line); border-radius:6px; font-size:12px; overflow-x:auto; white-space:pre;"><code>{{ heatSectionSnippet }}</code></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-head">
+          <h3>交易明細</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="hint">共 {{ fmtInt(summary.count) }} 筆，顯示第 {{ (page-1)*pageSize+1 }}–{{ Math.min(page*pageSize, summary.count) }} 筆</span>
+            <button class="btn seal" @click="exportCSV" :disabled="!summary.count">匯出 CSV</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>交易時間</th><th>縣市</th><th>鄉鎮市區</th><th>重劃區</th><th>交易標的</th><th>建物型態</th>
+                <th>門牌／地號</th><th>格局</th><th>建物坪數</th><th>土地坪數</th><th class="text">總價</th><th>純單價</th><th>每坪單價</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(r,i) in tableRows" :key="i">
+                <td>{{ fmtDate(r['交易時間']) }}</td>
+                <td class="text">{{ r['縣市'] ?? '' }}</td>
+                <td class="text">{{ r['鄉鎮市區'] ?? '' }}</td>
+                <td class="text">{{ r['重劃區'] ?? '' }}</td>
+                <td class="text">{{ r['交易標的'] ?? '' }}</td>
+                <td class="text">{{ r['建物型態'] ?? '' }}</td>
+                <td class="text">{{ r['門牌'] || r['地號'] || '' }}</td>
+                <td class="text">{{ r['格局'] || '' }}</td>
+                <td>{{ fmtNum(r['建物坪數']) }}</td>
+                <td>{{ fmtNum(r['土地坪數']) }}</td>
+                <td>{{ fmtAuto(r['總價']) }}</td>
+                <td>{{ fmtInt(r['純單價']) }}</td>
+                <td>{{ fmtInt(r['每坪單價']) }}</td>
+              </tr>
+              <tr v-if="!tableRows.length"><td colspan="13" class="text" style="text-align:center; padding:24px;">目前篩選條件下沒有資料</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button class="btn ghost" @click="page > 1 && (page--, loadTablePage())" :disabled="page<=1">上一頁</button>
+          <span class="mono">{{ page }} / {{ totalPages }}</span>
+          <button class="btn ghost" @click="page < totalPages && (page++, loadTablePage())" :disabled="page>=totalPages">下一頁</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="empty-state" v-else>
+    <span class="serif">請上傳 Parquet 檔案</span>
+    <span>上傳後會自動快取在本機瀏覽器，之後重新整理頁面不用再上傳一次；換檔案時直接重新上傳即可覆蓋快取</span>
+  </div>
+
+</div>
+
+<script type="module">
+import { createApp, reactive, ref, computed, onMounted, nextTick, watch } from 'https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.js';
+import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm/+esm';
+
+// chartjs-chart-boxplot 的 UMD 版本不會自動掛進 Chart.js,需要手動註冊 boxplot 圖表類型
+if (window.Chart && window.ChartBoxPlot) {
+  window.Chart.register(window.ChartBoxPlot.BoxPlotController, window.ChartBoxPlot.BoxAndWiskers);
+}
+
+// -----------------------------------------------------------------
+// 資料來源優先順序：① 本機 IndexedDB 快取（最快，不吃流量）→ ② 自動從 DEFAULT_DATASET_URL 抓伺服器主檔 → ③ 手動上傳。
+// （原本的「選擇資料檔」下拉選單依賴部署伺服器上的 ./data/ 目錄，實際使用環境沒有那個目錄，功能一直是壞的，已移除）
+// 不管是自動抓還是手動上傳，成功後都會存一份進瀏覽器本機的 IndexedDB，下次重新整理頁面會直接讀本機快取，不用再重新下載/上傳一次。
+// -----------------------------------------------------------------
+
+// 預設自動讀取的 parquet 網址：相對於 index.html 的位置，例如檔案跟 index.html 放同一層資料夾就用 './桃園市.parquet'，
+// 放在 data 子資料夾就用 './data/桃園市.parquet'；也可以直接填完整網址（https://...）。
+// 注意：這個自動讀取一定要透過 http(s) 網站伺服器才會生效，如果是直接雙擊打開 index.html（file:// 開頭）瀏覽器會擋掉，
+// 這時候就會自動退回去用手動上傳。不需要自動讀取的話，把值設成空字串 '' 即可。
+const DEFAULT_DATASET_URL = './桃園市.parquet';
+
+// 重劃區規則檔：./data/common_zone_rules.json
+// 結構：{ 縣市: { 鄉鎮市區: { 重劃區名稱: "段名1|段名2|段名3" } } }
+// pattern 是 regex（用 | 分隔多個地段），會拿去比對「土地位置」與「地號」欄位。
+// 同一鄉鎮市區內若多個重劃區規則有重疊的段名，採第一個符合的規則（依 json 內順序）。
+const ZONE_RULES_PATH = './data/common_zone_rules.json';
+
+// -----------------------------------------------------------------
+// 地區熱力圖用的行政區「概略中心點」座標表。
+// 因為實登資料只有門牌文字、沒有經緯度，沒辦法做到每一筆交易的精確定位，
+// 所以熱力圖是以「鄉鎮市區」為最小單位，把同一個行政區的交易量/均價彙總後，畫在該區大概的中心點上——
+// 是概略的區域熱力圖，不是逐筆地址的精確地圖。
+// 目前先收錄桃園市全部 13 個行政區（跟預設資料集對應）以及其他幾個常見縣市的主要行政區，
+// 沒收錄到的行政區交易不會出現在地圖上（會在圖表下方提示筆數），需要的話可以直接照格式在下面補上經緯度。
+// key 格式："縣市｜鄉鎮市區"，value 是 [緯度, 經度]
+const TW_DISTRICT_CENTROIDS = {
+  // 桃園市（13 區，完整收錄）
+  '桃園市｜桃園區': [24.9936, 121.3010], '桃園市｜中壢區': [24.9535, 121.2249],
+  '桃園市｜平鎮區': [24.9227, 121.2168], '桃園市｜八德區': [24.9270, 121.2884],
+  '桃園市｜楊梅區': [24.9160, 121.1469], '桃園市｜蘆竹區': [25.0447, 121.2926],
+  '桃園市｜大溪區': [24.8804, 121.2860], '桃園市｜龍潭區': [24.8637, 121.2144],
+  '桃園市｜龜山區': [25.0064, 121.3372], '桃園市｜大園區': [25.0611, 121.1963],
+  '桃園市｜觀音區': [25.0339, 121.0733], '桃園市｜新屋區': [24.9722, 121.0736],
+  '桃園市｜復興區': [24.8225, 121.3517],
+  // 台北市
+  '台北市｜中正區': [25.0322, 121.5197], '台北市｜大同區': [25.0630, 121.5133],
+  '台北市｜中山區': [25.0636, 121.5262], '台北市｜松山區': [25.0498, 121.5578],
+  '台北市｜大安區': [25.0263, 121.5436], '台北市｜萬華區': [25.0299, 121.4996],
+  '台北市｜信義區': [25.0330, 121.5654], '台北市｜士林區': [25.0919, 121.5254],
+  '台北市｜北投區': [25.1322, 121.5019], '台北市｜內湖區': [25.0693, 121.5904],
+  '台北市｜南港區': [25.0554, 121.6066], '台北市｜文山區': [24.9887, 121.5701],
+  // 新北市（主要幾個區）
+  '新北市｜板橋區': [25.0100, 121.4590], '新北市｜三重區': [25.0616, 121.4880],
+  '新北市｜中和區': [24.9998, 121.4990], '新北市｜永和區': [25.0079, 121.5152],
+  '新北市｜新莊區': [25.0369, 121.4327], '新北市｜新店區': [24.9678, 121.5416],
+  '新北市｜土城區': [24.9723, 121.4432], '新北市｜蘆洲區': [25.0847, 121.4736],
+  '新北市｜樹林區': [24.9906, 121.4198], '新北市｜三峽區': [24.9343, 121.3689],
+  '新北市｜林口區': [25.0777, 121.3915], '新北市｜淡水區': [25.1697, 121.4442],
+  // 台中市（主要幾個區）
+  '台中市｜中區': [24.1376, 120.6839], '台中市｜西區': [24.1444, 120.6667],
+  '台中市｜北區': [24.1590, 120.6837], '台中市｜北屯區': [24.1802, 120.7211],
+  '台中市｜西屯區': [24.1666, 120.6467], '台中市｜南屯區': [24.1391, 120.6440],
+  '台中市｜太平區': [24.1467, 120.7238], '台中市｜大里區': [24.0994, 120.6821],
+  '台中市｜霧峰區': [24.0524, 120.6997], '台中市｜烏日區': [24.1075, 120.6187],
+  // 台南市（主要幾個區）
+  '台南市｜中西區': [22.9964, 120.1987], '台南市｜東區': [22.9838, 120.2185],
+  '台南市｜南區': [22.9678, 120.1908], '台南市｜北區': [23.0075, 120.2079],
+  '台南市｜安平區': [22.9958, 120.1667], '台南市｜安南區': [23.0447, 120.1837],
+  '台南市｜永康區': [23.0267, 120.2564],
+  // 高雄市（主要幾個區）
+  '高雄市｜新興區': [22.6284, 120.3011], '高雄市｜前金區': [22.6272, 120.2891],
+  '高雄市｜苓雅區': [22.6212, 120.3126], '高雄市｜鹽埕區': [22.6260, 120.2822],
+  '高雄市｜鼓山區': [22.6499, 120.2811], '高雄市｜三民區': [22.6499, 120.3186],
+  '高雄市｜左營區': [22.6829, 120.2952], '高雄市｜楠梓區': [22.7267, 120.3110],
+  '高雄市｜前鎮區': [22.5936, 120.3187], '高雄市｜鳳山區': [22.6275, 120.3603],
+  // 新竹市／新竹縣（常見）
+  '新竹市｜東區': [24.8039, 120.9847], '新竹市｜北區': [24.8168, 120.9686],
+  '新竹市｜香山區': [24.7791, 120.9391], '新竹縣｜竹北市': [24.8388, 121.0072],
+  // 基隆市／宜蘭縣（市中心）
+  '基隆市｜仁愛區': [25.1286, 121.7419], '宜蘭縣｜宜蘭市': [24.7576, 121.7534],
+};
+// 查表用：把「縣市」「鄉鎮市區」組成 key，找不到就回傳 null
+function districtCentroid(county, district) {
+  if (!county || !district) return null;
+  return TW_DISTRICT_CENTROIDS[`${county}｜${district}`] || null;
+}
+
+// -----------------------------------------------------------------
+// 地段座標表：用來把熱力圖的解析度從「鄉鎮市區」提高到「地段」等級
+// （地段直接用「土地位置」欄位本身，通常會比自訂的重劃區分類更細）。
+// key 格式："縣市｜鄉鎮市區｜地段"，value 是 [緯度, 經度]（該地段大概中心點就可以，不用很精確）。
+// 範例（實際請照畫面上列出來的地段名稱跟座標修改/新增）：
+// '桃園市｜桃園區｜中路段': [24.9999, 121.3111],
+// 這裡先留空，畫面上會列出目前資料裡出現過、但還沒有座標的地段（依成交量排序），
+// 複製那邊列出來的格式貼過來這裡補座標即可，不用自己重新排版。
+const TW_SECTION_CENTROIDS = {
+};
+// 查表用：先找地段的精確座標，找不到就退回該行政區的中心點，都找不到才回 null
+function sectionCentroid(county, district, section) {
+  if (section && county && district) {
+    const key = `${county}｜${district}｜${section}`;
+    if (TW_SECTION_CENTROIDS[key]) return { point: TW_SECTION_CENTROIDS[key], precise: true, key };
+  }
+  const d = districtCentroid(county, district);
+  return d ? { point: d, precise: false, key: `${county}｜${district}｜${section || ''}` } : null;
+}
+
+// 本機快取上傳檔案用的 IndexedDB 小工具，避免每次重新整理都要重新上傳一次 parquet 檔（省流量）
+const CACHE_DB_NAME = 'realEstateDashboardCache';
+const CACHE_STORE = 'files';
+const CACHE_KEY = 'lastUpload';
+function openCacheDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(CACHE_DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(CACHE_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function saveDatasetToCache(name, bytes) {
+  try {
+    const idb = await openCacheDB();
+    await new Promise((resolve, reject) => {
+      const tx = idb.transaction(CACHE_STORE, 'readwrite');
+      tx.objectStore(CACHE_STORE).put({ name, bytes, savedAt: Date.now() }, CACHE_KEY);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    idb.close();
+  } catch (e) { console.error('本機快取儲存失敗', e); }
+}
+async function loadDatasetFromCache() {
+  try {
+    const idb = await openCacheDB();
+    const record = await new Promise((resolve, reject) => {
+      const tx = idb.transaction(CACHE_STORE, 'readonly');
+      const req = tx.objectStore(CACHE_STORE).get(CACHE_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    idb.close();
+    return record;
+  } catch (e) { console.error('讀取本機快取失敗', e); return null; }
+}
+async function clearDatasetCache() {
+  try {
+    const idb = await openCacheDB();
+    await new Promise((resolve, reject) => {
+      const tx = idb.transaction(CACHE_STORE, 'readwrite');
+      tx.objectStore(CACHE_STORE).delete(CACHE_KEY);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    idb.close();
+  } catch (e) { console.error('清除本機快取失敗', e); }
+}
+
+createApp({
+  setup() {
+    const cachedFileName = ref('');
+    const cachedSavedAt = ref(null);
+    const loading = ref(false);
+    const dataLoaded = ref(false);
+    const statusText = ref('尚未載入資料');
+    const statusClass = ref('');
+    const trendCanvas = ref(null);
+    const typeCanvas = ref(null);
+    const totalCanvas = ref(null);
+    const buildingAreaCanvas = ref(null);
+    const landAreaCanvas = ref(null);
+    const locationCanvas = ref(null);
+    const heatMapEl = ref(null);
+    const topbarEl = ref(null);
+
+    let db = null, conn = null;
+    let currentSource = null; // 'v_data' 的 read_parquet 來源檔名
+    let trendChart = null, typeChart = null, totalChart = null, buildingAreaChart = null, landAreaChart = null, locationChart = null;
+    let leafletMap = null, heatLayer = null; // 地區熱力圖用的 Leaflet 地圖跟熱力圖層，只會初始化一次，之後重複利用
+    let zoneRules = null; // common_zone_rules.json 內容，載入後才拼得出重劃區的 CASE WHEN
+
+    // 樓層欄位名稱不一定跟預期一樣，實際載入資料後用 DESCRIBE 偵測 v_data 裡有沒有這些常見欄位名稱，
+    // 偵測不到就不顯示樓層篩選（不會讓整個查詢因為欄位不存在而爆掉）
+    const floorCol = ref(null);      // 移轉層次（該筆交易在哪一層/哪幾層）
+    const totalFloorCol = ref(null); // 總樓層數（建物總共幾層）
+    async function detectFloorColumns() {
+      floorCol.value = null; totalFloorCol.value = null;
+      try {
+        const cols = await q(`DESCRIBE v_data`);
+        const names = cols.map(c => c.column_name);
+        const floorCandidates = ['移轉層次', '所在樓層', '樓層'];
+        const totalFloorCandidates = ['總樓層數', '總樓層'];
+        floorCol.value = floorCandidates.find(c => names.includes(c)) || null;
+        totalFloorCol.value = totalFloorCandidates.find(c => names.includes(c)) || null;
+      } catch (e) {
+        console.error('偵測樓層欄位失敗', e);
+      }
+    }
+
+    const filterOptions = reactive({
+      counties: [], districts: [], buildingTypes: [], targets: [], zones: [], floors: [],
+      yearMinAD: 2012, yearMaxAD: 2026, yearMinRolling: 2012, yearMaxRolling: 2026,
+      totalPriceMin: 0, totalPriceMax: 0,
+      unitPriceMin: 0, unitPriceMax: 0,
+      areaMin: 0, areaMax: 0,
+      landAreaMin: 0, landAreaMax: 0,
+      totalFloorMin: 0, totalFloorMax: 0,
+    });
+
+    const filters = reactive({
+      counties: [], districts: [], targets: [], buildingTypes: [], zones: [], floors: [],
+      yearMin: null, yearMax: null,
+      totalPriceMin: null, totalPriceMax: null,
+      metric: '純單價',
+      unitPriceMin: null, unitPriceMax: null,
+      areaMin: null, areaMax: null,
+      landAreaMin: null, landAreaMax: null,
+      totalFloorMin: null, totalFloorMax: null,
+      keyword: '',
+      excludeAbnormal: true,
+    });
+
+    const summary = reactive({ count: 0, avgTotal: 0, medTotal: 0, avgUnit: 0, medUnit: 0 });
+    const excludedCount = ref(0);
+    const tableRows = ref([]);
+    const page = ref(1);
+    const pageSize = 50;
+    // 年份顯示模式：'ad' = 交易年（西元日曆年，1/1~12/31）；'rolling' = 交易年度（以今天為基準，往前推算的滾動 12 個月，
+    // 例如今天是 2026-07-22，交易年度 2026 = 2025-07-23 ~ 2026-07-22 這一年內的交易，交易年度 2025 = 再往前一年）。
+    // 資料裡「交易年」「交易年度」都是現成欄位（不用在前端即時算），切換模式時分組/篩選改用對應欄位，並重新查詢一次。
+    const yearMode = ref('ad');
+    let lastTrendRows = [], lastTotalRows = [], lastBuildingAreaRows = [], lastLandAreaRows = [], lastByTypeRows = [], lastByLocationRows = [], lastHeatRows = [];
+    // 5+2 張圖表各自的顯示開關，勾選框動態控制要不要畫
+    const chartVisibility = reactive({ trend: true, total: true, buildingArea: true, landArea: true, byType: true, byLocation: true, heatmap: true });
+    // 地區熱力圖的強度依據：'count' 用成交量、'price' 用均價
+    const heatMetric = ref('count');
+    const heatUnmappedCount = ref(0); // 有多少筆交易的行政區不在座標表裡、沒辦法畫到地圖上
+    const heatSectionCandidates = ref([]); // 目前資料裡出現過、但地段還沒有精確座標的組合（依成交量排序）
+    // 組成可以直接複製貼到 TW_SECTION_CENTROIDS 的程式碼片段，貼上後把 0,0 換成實際經緯度就好
+    const heatSectionSnippet = computed(() => heatSectionCandidates.value
+      .map(z => `  '${z.key}': [0, 0], // ${z.cnt} 筆，目前顯示在行政區中心點`)
+      .join('\n'));
+    const sectionSnippetCopied = ref(false);
+    async function copySectionSnippet() {
+      try {
+        await navigator.clipboard.writeText(heatSectionSnippet.value);
+        sectionSnippetCopied.value = true;
+        setTimeout(() => { sectionSnippetCopied.value = false; }, 2000);
+      } catch (e) {
+        console.error('複製失敗', e);
+      }
+    }
+    // 依目前的年份模式回傳「年份分組」用的欄位名稱：資料裡「交易年」「交易年度」都是現成欄位，直接切換欄位就好
+    function yearGroupSQL() {
+      return yearMode.value === 'rolling' ? `"交易年度"` : `"交易年"`;
+    }
+    function yearNotNullSQL() {
+      return yearMode.value === 'rolling' ? `"交易年度" IS NOT NULL` : `"交易年" IS NOT NULL`;
+    }
+    function yearLabel(yr) {
+      if (yr === null || yr === undefined) return '';
+      const n = Number(yr);
+      return Number.isFinite(n) ? String(Math.round(n)) : String(yr);
+    }
+    // 交易年／交易年度範圍不一定一樣，這裡依目前模式回傳對應的範圍給篩選面板用
+    const curYearMin = computed(() => yearMode.value === 'rolling' ? filterOptions.yearMinRolling : filterOptions.yearMinAD);
+    const curYearMax = computed(() => yearMode.value === 'rolling' ? filterOptions.yearMaxRolling : filterOptions.yearMaxAD);
+    const totalPages = computed(() => Math.max(1, Math.ceil(summary.count / pageSize)));
+
+    function esc(v) { return String(v).replace(/'/g, "''"); }
+    function fmtInt(v) { if (v === null || v === undefined || Number.isNaN(v)) return '–'; return Math.round(Number(v)).toLocaleString('zh-TW'); }
+    function fmtWan(v) { if (v === null || v === undefined || Number.isNaN(v)) return '–'; return Math.round(Number(v) / 10000).toLocaleString('zh-TW'); }
+    function fmtNum(v) { if (v === null || v === undefined || Number.isNaN(v)) return '–'; return Number(v).toFixed(1); }
+    // 元/坪 數值自動切換單位：未滿萬用「元」，滿萬用「萬」（例：1,139,785 → 113.98 萬）
+    function fmtPriceShort(v) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '–';
+      const n = Number(v);
+      const abs = Math.abs(n);
+      if (abs >= 1e4) return (n / 1e4).toLocaleString('zh-TW', { maximumFractionDigits: 2, minimumFractionDigits: 0 }) + ' 萬';
+      return Math.round(n).toLocaleString('zh-TW') + ' 元';
+    }
+    function fmtPriceAuto(v) {
+      const s = fmtPriceShort(v);
+      return s === '–' ? s : s + '/坪';
+    }
+    // duckdb-wasm 的 DATE/TIMESTAMP 欄位透過 JS binding 取出時會是 epoch 毫秒數（或 Date/BigInt），這裡統一轉成 YYYY-MM-DD 顯示
+    function fmtDate(v) {
+      if (v === null || v === undefined || v === '') return '';
+      if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10);
+      const ms = typeof v === 'bigint' ? Number(v) : Number(v);
+      if (!Number.isFinite(ms)) return String(v);
+      const d = new Date(ms);
+      if (Number.isNaN(d.getTime())) return String(v);
+      return d.toISOString().slice(0, 10);
+    }
+    // 依數值大小自動選擇單位：千（原始元，千分位）→萬→億
+    function fmtAuto(v) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '–';
+      const n = Number(v);
+      const abs = Math.abs(n);
+      if (abs >= 1e8) return (n / 1e8).toLocaleString('zh-TW', { maximumFractionDigits: 2, minimumFractionDigits: 0 }) + ' 億';
+      if (abs >= 1e4) return (n / 1e4).toLocaleString('zh-TW', { maximumFractionDigits: 1, minimumFractionDigits: 0 }) + ' 萬';
+      return Math.round(n).toLocaleString('zh-TW') + ' 元';
+    }
+
+    async function initDuckDB() {
+      if (db) return;
+      statusText.value = '初始化 DuckDB-Wasm…'; statusClass.value = 'busy';
+      const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+      const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+      const worker_url = URL.createObjectURL(
+        new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+      );
+      const worker = new Worker(worker_url);
+      const logger = new duckdb.ConsoleLogger();
+      db = new duckdb.AsyncDuckDB(logger, worker);
+      await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      URL.revokeObjectURL(worker_url);
+      conn = await db.connect();
+    }
+
+    async function loadZoneRules() {
+      try {
+        const res = await fetch(ZONE_RULES_PATH);
+        if (res.ok) zoneRules = await res.json();
+      } catch { zoneRules = null; }
+    }
+
+    // 依 common_zone_rules.json 拼出一段 SQL CASE WHEN，比對「土地位置」與「地號」判斷重劃區
+    function buildZoneCaseSQL() {
+      if (!zoneRules) return 'NULL';
+      const whens = [];
+      for (const [county, districts] of Object.entries(zoneRules)) {
+        for (const [district, zones] of Object.entries(districts)) {
+          for (const [zoneName, pattern] of Object.entries(zones)) {
+            whens.push(
+              `WHEN "縣市" = '${esc(county)}' AND "鄉鎮市區" = '${esc(district)}' ` +
+              `AND regexp_matches(COALESCE("土地位置",'') || '｜' || COALESCE("地號",''), '${esc(pattern)}') ` +
+              `THEN '${esc(zoneName)}'`
+            );
+          }
+        }
+      }
+      return whens.length ? `CASE ${whens.join(' ')} ELSE NULL END` : 'NULL';
+    }
+
+    async function loadBytesIntoDB(bytes) {
+      await initDuckDB();
+      const regName = 'ds_' + Date.now() + '.parquet';
+      await db.registerFileBuffer(regName, bytes);
+      currentSource = regName;
+      await conn.query(`CREATE OR REPLACE VIEW v_data AS SELECT *, (${buildZoneCaseSQL()}) AS "重劃區" FROM read_parquet('${regName}')`);
+      await afterLoad();
+    }
+
+    async function loadUploadedFile(file) {
+      loading.value = true; statusText.value = '讀取上傳檔案…'; statusClass.value = 'busy';
+      try {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        await loadBytesIntoDB(buf);
+        // 上傳成功後把檔案內容存進 IndexedDB，重新整理頁面時可以直接讀回，不用再上傳一次（省流量）
+        cachedFileName.value = file.name; cachedSavedAt.value = Date.now();
+        saveDatasetToCache(file.name, buf);
+      } catch (e) {
+        console.error(e);
+        statusText.value = '讀取失敗：檔案格式錯誤'; statusClass.value = 'err';
+        dataLoaded.value = false;
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function loadFromCacheRecord(record) {
+      loading.value = true; statusText.value = '讀取本機快取資料中…'; statusClass.value = 'busy';
+      try {
+        await loadBytesIntoDB(record.bytes);
+        cachedFileName.value = record.name; cachedSavedAt.value = record.savedAt;
+      } catch (e) {
+        console.error(e);
+        statusText.value = '本機快取讀取失敗，請重新上傳'; statusClass.value = 'err';
+        dataLoaded.value = false;
+        await clearCache();
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    // 自動從伺服器抓主檔（例如 DEFAULT_DATASET_URL 指向的 桃園市.parquet），不用手動上傳。
+    // 只有網址必須能用 http(s) 連得到才會成功（index.html 要放在真的網站伺服器上，不能是直接雙擊打開的本機檔案）。
+    // 抓成功後一樣會存進 IndexedDB，下次重新整理就直接吃本機快取，不會再重複下載。
+    async function loadFromServerDefault(url) {
+      loading.value = true; statusText.value = '首次載入，從伺服器下載主檔中…'; statusClass.value = 'busy';
+      try {
+        const abs = new URL(url, window.location.href).href;
+        const res = await fetch(abs);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const buf = new Uint8Array(await res.arrayBuffer());
+        await loadBytesIntoDB(buf);
+        const name = url.split('/').pop();
+        cachedFileName.value = name; cachedSavedAt.value = Date.now();
+        saveDatasetToCache(name, buf);
+        return true;
+      } catch (e) {
+        console.error('讀取伺服器主檔失敗', e);
+        loading.value = false;
+        return false;
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function clearCache() {
+      await clearDatasetCache();
+      cachedFileName.value = ''; cachedSavedAt.value = null;
+    }
+
+    function fmtCacheTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    async function q(sql) {
+      const res = await conn.query(sql);
+      return res.toArray().map(r => r.toJSON ? r.toJSON() : r);
+    }
+
+    async function afterLoad() {
+      await detectFloorColumns();
+
+      // 篩選選項
+      const counties = await q(`SELECT DISTINCT "縣市" v FROM v_data WHERE "縣市" IS NOT NULL ORDER BY v`);
+      const districts = await q(`SELECT DISTINCT "鄉鎮市區" v FROM v_data WHERE "鄉鎮市區" IS NOT NULL ORDER BY v`);
+      const targets = await q(`SELECT DISTINCT "交易標的" v FROM v_data WHERE "交易標的" IS NOT NULL ORDER BY v`);
+      const btypes = await q(`SELECT DISTINCT "建物型態" v FROM v_data WHERE "建物型態" IS NOT NULL ORDER BY v`);
+      const zones = await q(`SELECT DISTINCT "重劃區" v FROM v_data WHERE "重劃區" IS NOT NULL ORDER BY v`);
+      const yearRange = await q(`SELECT MIN("交易年") mn, MAX("交易年") mx FROM v_data`);
+      const yearRangeRolling = await q(`SELECT MIN("交易年度") mn, MAX("交易年度") mx FROM v_data`);
+      const priceRange = await q(`SELECT MIN("總價") mn, MAX("總價") mx FROM v_data`);
+      const unitRange = await q(`SELECT MIN("純單價") mn, MAX("純單價") mx FROM v_data`);
+      const areaRange = await q(`SELECT MIN("建物坪數") mn, MAX("建物坪數") mx FROM v_data`);
+      const landAreaRange = await q(`SELECT MIN("土地坪數") mn, MAX("土地坪數") mx FROM v_data`);
+      const excluded = await q(`SELECT COUNT(*) c FROM v_data WHERE "是否排除" = true`);
+      const floors = floorCol.value
+        ? await q(`SELECT DISTINCT "${floorCol.value}" v FROM v_data WHERE "${floorCol.value}" IS NOT NULL ORDER BY v`)
+        : [];
+      const totalFloorRange = totalFloorCol.value
+        ? await q(`SELECT MIN("${totalFloorCol.value}") mn, MAX("${totalFloorCol.value}") mx FROM v_data`)
+        : [];
+
+      filterOptions.counties = counties.map(r => r.v);
+      filterOptions.districts = districts.map(r => r.v);
+      filterOptions.targets = targets.map(r => r.v);
+      filterOptions.buildingTypes = btypes.map(r => r.v);
+      filterOptions.zones = zones.map(r => r.v);
+      filterOptions.floors = floors.map(r => r.v);
+      filterOptions.totalFloorMin = Number(totalFloorRange[0]?.mn ?? 0);
+      filterOptions.totalFloorMax = Number(totalFloorRange[0]?.mx ?? 0);
+      // 交易年／交易年度是兩個不同欄位，範圍不一定一樣，分開存，篩選面板會依目前模式顯示對應的範圍
+      filterOptions.yearMinAD = Number(yearRange[0]?.mn ?? 2012);
+      filterOptions.yearMaxAD = Number(yearRange[0]?.mx ?? 2026);
+      filterOptions.yearMinRolling = Number(yearRangeRolling[0]?.mn ?? filterOptions.yearMinAD);
+      filterOptions.yearMaxRolling = Number(yearRangeRolling[0]?.mx ?? filterOptions.yearMaxAD);
+      filterOptions.totalPriceMin = Number(priceRange[0]?.mn ?? 0);
+      filterOptions.totalPriceMax = Number(priceRange[0]?.mx ?? 0);
+      filterOptions.unitPriceMin = Number(unitRange[0]?.mn ?? 0);
+      filterOptions.unitPriceMax = Number(unitRange[0]?.mx ?? 0);
+      filterOptions.areaMin = Number(areaRange[0]?.mn ?? 0);
+      filterOptions.areaMax = Number(areaRange[0]?.mx ?? 0);
+      filterOptions.landAreaMin = Number(landAreaRange[0]?.mn ?? 0);
+      filterOptions.landAreaMax = Number(landAreaRange[0]?.mx ?? 0);
+      excludedCount.value = Number(excluded[0]?.c ?? 0);
+
+      // 篩選預設值：一般房屋買賣（無車位/有車位）為預設情境
+      filters.counties = [];
+      filters.districts = [];
+      const defaultTargets = filterOptions.targets.filter(t => t === '無車位' || t === '有車位');
+      filters.targets = defaultTargets.length ? defaultTargets : [...filterOptions.targets];
+      filters.buildingTypes = [];
+      filters.zones = [];
+      filters.floors = [];
+      filters.totalFloorMin = Math.floor(filterOptions.totalFloorMin);
+      filters.totalFloorMax = Math.ceil(filterOptions.totalFloorMax);
+      filters.yearMin = filterOptions.yearMinAD;
+      filters.yearMax = filterOptions.yearMaxAD;
+      filters.totalPriceMin = Math.floor(filterOptions.totalPriceMin / 10000);
+      filters.totalPriceMax = Math.ceil(filterOptions.totalPriceMax / 10000);
+      filters.metric = '純單價';
+      filters.unitPriceMin = Math.floor(filterOptions.unitPriceMin);
+      filters.unitPriceMax = Math.ceil(filterOptions.unitPriceMax);
+      filters.areaMin = Math.floor(filterOptions.areaMin);
+      filters.areaMax = Math.ceil(filterOptions.areaMax);
+      filters.landAreaMin = Math.floor(filterOptions.landAreaMin);
+      filters.landAreaMax = Math.ceil(filterOptions.landAreaMax);
+      filters.keyword = '';
+      filters.excludeAbnormal = true;
+
+      dataLoaded.value = true;
+      statusText.value = '已載入'; statusClass.value = 'ok';
+      page.value = 1;
+      await refreshAll();
+    }
+
+    async function onMetricChange() {
+      const col = filters.metric === '每坪單價' ? '每坪單價' : '純單價';
+      const r = await q(`SELECT MIN("${col}") mn, MAX("${col}") mx FROM v_data`);
+      filterOptions.unitPriceMin = Number(r[0]?.mn ?? 0);
+      filterOptions.unitPriceMax = Number(r[0]?.mx ?? 0);
+      filters.unitPriceMin = Math.floor(filterOptions.unitPriceMin);
+      filters.unitPriceMax = Math.ceil(filterOptions.unitPriceMax);
+    }
+
+    function isQuickTarget(list) {
+      const a = [...filters.targets].sort().join(',');
+      const b = [...list].sort().join(',');
+      return a === b;
+    }
+    function setTargets(list) { filters.targets = [...list]; }
+
+    function buildWhere() {
+      const c = [];
+      if (filters.counties.length) c.push(`"縣市" IN (${filters.counties.map(v => `'${esc(v)}'`).join(',')})`);
+      if (filters.targets.length) c.push(`"交易標的" IN (${filters.targets.map(v => `'${esc(v)}'`).join(',')})`);
+      else c.push('1=0');
+      if (filters.districts.length) c.push(`"鄉鎮市區" IN (${filters.districts.map(v => `'${esc(v)}'`).join(',')})`);
+      if (filters.buildingTypes.length) c.push(`"建物型態" IN (${filters.buildingTypes.map(v => `'${esc(v)}'`).join(',')})`);
+      if (filters.zones.length) c.push(`"重劃區" IN (${filters.zones.map(v => `'${esc(v)}'`).join(',')})`);
+      // 交易年／交易年度都是現成欄位，篩選時依目前模式挑對應欄位，用 BETWEEN 一次比對就好
+      const yearCol = yearMode.value === 'rolling' ? '交易年度' : '交易年';
+      if ((filters.yearMin !== null && filters.yearMin > curYearMin.value) ||
+          (filters.yearMax !== null && filters.yearMax < curYearMax.value)) {
+        c.push(`"${yearCol}" BETWEEN ${filters.yearMin} AND ${filters.yearMax}`);
+      }
+      const tMin = filterOptions.totalPriceMin / 10000, tMax = filterOptions.totalPriceMax / 10000;
+      if (filters.totalPriceMin !== null && filters.totalPriceMin > Math.floor(tMin)) c.push(`"總價" >= ${filters.totalPriceMin * 10000}`);
+      if (filters.totalPriceMax !== null && filters.totalPriceMax < Math.ceil(tMax)) c.push(`"總價" <= ${filters.totalPriceMax * 10000}`);
+      const metricCol = filters.metric === '每坪單價' ? '每坪單價' : '純單價';
+      if (filters.unitPriceMin !== null && filters.unitPriceMin > Math.floor(filterOptions.unitPriceMin)) c.push(`"${metricCol}" >= ${filters.unitPriceMin}`);
+      if (filters.unitPriceMax !== null && filters.unitPriceMax < Math.ceil(filterOptions.unitPriceMax)) c.push(`"${metricCol}" <= ${filters.unitPriceMax}`);
+      if (filters.areaMin !== null && filters.areaMin > Math.floor(filterOptions.areaMin)) c.push(`"建物坪數" >= ${filters.areaMin}`);
+      if (filters.areaMax !== null && filters.areaMax < Math.ceil(filterOptions.areaMax)) c.push(`"建物坪數" <= ${filters.areaMax}`);
+      if (filters.landAreaMin !== null && filters.landAreaMin > Math.floor(filterOptions.landAreaMin)) c.push(`"土地坪數" >= ${filters.landAreaMin}`);
+      if (filters.landAreaMax !== null && filters.landAreaMax < Math.ceil(filterOptions.landAreaMax)) c.push(`"土地坪數" <= ${filters.landAreaMax}`);
+      // 樓層篩選：欄位名稱是偵測到的才會加條件，避免資料裡根本沒有這個欄位時查詢直接報錯
+      if (floorCol.value && filters.floors.length) c.push(`"${floorCol.value}" IN (${filters.floors.map(v => `'${esc(v)}'`).join(',')})`);
+      if (totalFloorCol.value) {
+        if (filters.totalFloorMin !== null && filters.totalFloorMin > Math.floor(filterOptions.totalFloorMin)) c.push(`"${totalFloorCol.value}" >= ${filters.totalFloorMin}`);
+        if (filters.totalFloorMax !== null && filters.totalFloorMax < Math.ceil(filterOptions.totalFloorMax)) c.push(`"${totalFloorCol.value}" <= ${filters.totalFloorMax}`);
+      }
+      if (filters.excludeAbnormal) c.push(`"是否排除" = false`);
+      if (filters.keyword) {
+        const kw = esc(filters.keyword);
+        c.push(`("門牌" ILIKE '%${kw}%' OR "地號" ILIKE '%${kw}%' OR "建案名稱" ILIKE '%${kw}%' OR "棟及號" ILIKE '%${kw}%')`);
+      }
+      return c.length ? c.join(' AND ') : '1=1';
+    }
+
+    let refreshTimer = null;
+    function scheduleRefresh() {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => { page.value = 1; refreshAll(); }, 350);
+    }
+
+    async function refreshAll() {
+      if (!conn) return;
+      const where = buildWhere();
+      const metricCol = filters.metric === '每坪單價' ? '每坪單價' : '純單價';
+
+      const sumRows = await q(`
+        SELECT COUNT(*) cnt, AVG("總價") avg_total, MEDIAN("總價") med_total,
+               AVG("${metricCol}") avg_unit, MEDIAN("${metricCol}") med_unit
+        FROM v_data WHERE ${where}`);
+      const s = sumRows[0] || {};
+      summary.count = Number(s.cnt ?? 0);
+      summary.avgTotal = s.avg_total; summary.medTotal = s.med_total;
+      summary.avgUnit = s.avg_unit; summary.medUnit = s.med_unit;
+
+      const yrExpr = yearGroupSQL();
+      const yrNotNull = yearNotNullSQL();
+
+      const trend = await q(`
+        SELECT ${yrExpr} yr, COUNT(*) cnt, array_agg("${metricCol}") vals
+        FROM v_data WHERE ${where} AND ${yrNotNull} AND "${metricCol}" IS NOT NULL
+        GROUP BY yr ORDER BY yr`);
+
+      const totalBox = await q(`
+        SELECT ${yrExpr} yr, COUNT(*) cnt, array_agg("總價") vals
+        FROM v_data WHERE ${where} AND ${yrNotNull} AND "總價" IS NOT NULL
+        GROUP BY yr ORDER BY yr`);
+
+      const buildingAreaBox = await q(`
+        SELECT ${yrExpr} yr, COUNT(*) cnt, array_agg("建物坪數") vals
+        FROM v_data WHERE ${where} AND ${yrNotNull} AND "建物坪數" IS NOT NULL
+        GROUP BY yr ORDER BY yr`);
+
+      const landAreaBox = await q(`
+        SELECT ${yrExpr} yr, COUNT(*) cnt, array_agg("土地坪數") vals
+        FROM v_data WHERE ${where} AND ${yrNotNull} AND "土地坪數" IS NOT NULL
+        GROUP BY yr ORDER BY yr`);
+
+      const byType = await q(`
+        SELECT COALESCE("建物型態",'（無資料）') t, COUNT(*) cnt, AVG("${metricCol}") avg_unit
+        FROM v_data WHERE ${where}
+        GROUP BY "建物型態" ORDER BY cnt DESC`);
+
+      // 土地位置原始欄位通常是完整地址/地段字串，種類非常多，這裡只取交易筆數最多的前 15 個熱門地點
+      const byLocation = await q(`
+        SELECT COALESCE("土地位置",'（無資料）') t, COUNT(*) cnt, AVG("${metricCol}") avg_unit
+        FROM v_data WHERE ${where}
+        GROUP BY "土地位置" ORDER BY cnt DESC LIMIT 15`);
+
+      // 地區熱力圖：資料只有門牌文字沒有經緯度，改用「縣市＋鄉鎮市區＋地段」彙總。
+      // 地段直接用「土地位置」欄位（本身就是地段名稱），不用額外處理。
+      // 地段有精確座標的話畫在該地段中心點，沒有的話退回行政區中心點。
+      const bySection = await q(`
+        SELECT "縣市" county, "鄉鎮市區" district,
+               COALESCE("土地位置", '（未知地段）') "section",
+               COUNT(*) cnt, AVG("${metricCol}") avg_unit, AVG("總價") avg_total
+        FROM v_data WHERE ${where} AND "縣市" IS NOT NULL AND "鄉鎮市區" IS NOT NULL
+        GROUP BY "縣市","鄉鎮市區","section"`);
+
+      await nextTick();
+      lastTrendRows = trend; lastTotalRows = totalBox;
+      lastBuildingAreaRows = buildingAreaBox; lastLandAreaRows = landAreaBox; lastByTypeRows = byType; lastByLocationRows = byLocation;
+      lastHeatRows = bySection;
+      renderVisibleCharts();
+      await loadTablePage();
+    }
+
+    // 只畫勾選框有打勾的圖表；個別 renderXxxChart() 內部本來就會檢查 canvas 是否存在（v-if 隱藏時 ref 會是 null），
+    // 所以就算多呼叫沒開的也不會出錯，這裡統一走一次即可。
+    function renderVisibleCharts() {
+      if (chartVisibility.trend) renderTrendChart(lastTrendRows);
+      if (chartVisibility.total) renderTotalChart(lastTotalRows);
+      if (chartVisibility.buildingArea) renderBuildingAreaChart(lastBuildingAreaRows);
+      if (chartVisibility.landArea) renderLandAreaChart(lastLandAreaRows);
+      if (chartVisibility.byType) renderTypeChart(lastByTypeRows);
+      if (chartVisibility.byLocation) renderLocationChart(lastByLocationRows);
+      if (chartVisibility.heatmap) renderHeatMap(lastHeatRows);
+    }
+
+    async function loadTablePage() {
+      const where = buildWhere();
+      const offset = (page.value - 1) * pageSize;
+      const rows = await q(`
+        SELECT "交易時間","縣市","鄉鎮市區","重劃區","交易標的","建物型態","門牌","地號","格局","建物坪數","土地坪數","總價","純單價","每坪單價"
+        FROM v_data WHERE ${where}
+        ORDER BY "交易時間" DESC NULLS LAST
+        LIMIT ${pageSize} OFFSET ${offset}`);
+      tableRows.value = rows;
+    }
+
+    // 把 DuckDB array_agg 回傳的 list 欄位轉成一般 JS number 陣列，供箱型圖套件自行計算四分位數/離群值
+    function boxDatasetData(rows) {
+      return rows.map(r => {
+        const v = r.vals;
+        if (Array.isArray(v)) return v.map(Number);
+        if (v && typeof v.toArray === 'function') return Array.from(v.toArray()).map(Number);
+        if (v && typeof v[Symbol.iterator] === 'function') return Array.from(v).map(Number);
+        return [];
+      });
+    }
+
+    // chartjs-chart-boxplot 只會算中位數/四分位數，平均值要自己從原始資料算，再掛到 dataset 上讓 tooltip 取用
+    function meansFromBoxData(boxData) {
+      return boxData.map(arr => {
+        if (!arr || !arr.length) return null;
+        let sum = 0, n = 0;
+        for (const v of arr) { if (Number.isFinite(v)) { sum += v; n++; } }
+        return n ? sum / n : null;
+      });
+    }
+
+    // 計算某個百分位數（sortedArr 需已由小到大排序）
+    function percentileOf(sortedArr, p) {
+      if (!sortedArr.length) return 0;
+      const idx = (sortedArr.length - 1) * p;
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      if (lo === hi) return sortedArr[lo];
+      return sortedArr[lo] + (sortedArr[hi] - sortedArr[lo]) * (idx - lo);
+    }
+
+    // 依資料的 99 百分位數估算一個「好看」的 Y 軸上限，避免極端離群值把箱體壓扁成一條貼底的線
+    // （箱型圖本身的統計仍以完整資料計算中位數/四分位數，只是畫面顯示範圍被限制在合理區間，超出範圍的離群值不會畫出來但不影響統計數字，滑鼠移到箱體上仍看得到正確的範圍）
+    function suggestedAxisMax(datasets) {
+      const all = [];
+      datasets.forEach(arr => arr.forEach(v => { if (Number.isFinite(v)) all.push(v); }));
+      if (!all.length) return undefined;
+      all.sort((a, b) => a - b);
+      const p99 = percentileOf(all, 0.99);
+      if (!(p99 > 0)) return undefined;
+      const withMargin = p99 * 1.15;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(withMargin)) - 1);
+      return Math.ceil(withMargin / magnitude) * magnitude;
+    }
+
+    // 依整個座標軸的量級挑一個「全軸統一」的單位（元/萬元/億元），軸刻度只顯示數字，單位寫在軸標題，
+    // 避免像「70萬」「60萬」這樣每個刻度都重複顯示單位
+    function pickPriceUnit(maxVal) {
+      const abs = Math.abs(Number(maxVal) || 0);
+      if (abs >= 1e8) return { divisor: 1e8, unit: '億' };
+      if (abs >= 1e4) return { divisor: 1e4, unit: '萬' };
+      return { divisor: 1, unit: '元' };
+    }
+    function fmtByUnit(v, divisor) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '–';
+      const n = Number(v) / divisor;
+      return n.toLocaleString('zh-TW', { maximumFractionDigits: divisor === 1 ? 0 : 1 });
+    }
+    function boxChartOptions(axisTitle, fmt, axisMax, tickFmt, meansArr) {
+      return {
+        responsive: true, maintainAspectRatio: false,
+        // 手機沒有滑鼠 hover，用 tap 觸發；intersect:false 讓手指點在箱體附近就能觸發提示框。
+        // mode:'index' 會把同一個年份底下的箱體跟右軸的筆數折線一起收進同一個 tooltip 顯示
+        interaction: { mode: 'index', axis: 'x', intersect: false },
+        plugins: {
+          // 現在每張箱型圖都疊了「筆數」折線，變成 2 個 dataset 了，一定要開圖例才知道哪條線是哪個數列，
+          // 之前這裡設 display:false 是舊版只有 1 個箱型 dataset 時留下的設定，忘了跟著改，這就是黑線看起來很像箱型圖本身一部分、搞不清楚是什麼的原因
+          legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            // 手機螢幕小、字要大一點才點得準、看得清楚
+            titleFont: { size: 13 }, bodyFont: { size: 13 }, padding: 10, displayColors: false,
+            callbacks: {
+              label(ctx) {
+                if (ctx.dataset.type === 'line') return `筆數：${fmtInt(ctx.parsed.y)}`;
+                // chartjs-chart-boxplot 控制器會把算好的統計值放在 ctx.parsed，ctx.raw 只是我們傳進去的原始數字陣列本身
+                let s = ctx.parsed;
+                if (!s || s.median === undefined) s = ctx.raw;
+                if (!s || s.median === undefined) return '';
+                // 平均值直接從畫圖時就準備好的陣列取值（跟 ctx.dataIndex 對齊），不透過 ctx.dataset 轉手，比較不會取不到值
+                const mean = meansArr ? meansArr[ctx.dataIndex] : null;
+                return [
+                  `平均值：${fmt(mean)}`, `中位數：${fmt(s.median)}`,
+                  `Q1 ~ Q3：${fmt(s.q1)} ~ ${fmt(s.q3)}`,
+                  `範圍：${fmt(s.min)} ~ ${fmt(s.max)}`,
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { minRotation: 90, maxRotation: 90 } },
+          y: {
+            position: 'left',
+            title: { display: true, text: axisTitle },
+            ...(axisMax ? { max: axisMax } : {}),
+            ...(tickFmt ? { ticks: { callback: (v) => tickFmt(v) } } : {}),
+            beginAtZero: true,
+          },
+          // 右軸：這一年（或這一組）的交易筆數，跟 5 個圖表其他的均價/筆數雙軸圖表看起來一致
+          y1: {
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: '筆數' },
+            beginAtZero: true,
+          }
+        }
+      };
+    }
+
+    function renderTrendChart(rows) {
+      if (!trendCanvas.value) return;
+      if (trendChart) trendChart.destroy();
+      const boxData = boxDatasetData(rows);
+      const axisMax = suggestedAxisMax(boxData);
+      const unit = pickPriceUnit(axisMax);
+      const means = meansFromBoxData(boxData);
+      const counts = rows.map(r => Number(r.cnt) || 0);
+      trendChart = new Chart(trendCanvas.value.getContext('2d'), {
+        data: {
+          labels: rows.map(r => yearLabel(r.yr)),
+          datasets: [
+            { type: 'boxplot', label: filters.metric, data: boxData, yAxisID: 'y',
+              backgroundColor: '#A6321F33', borderColor: '#A6321F', borderWidth: 1.5,
+              outlierColor: '#A6321F', itemRadius: 0, medianColor: '#A6321F' },
+            { type: 'line', label: '筆數', data: counts, yAxisID: 'y1',
+              borderColor: '#262320', backgroundColor: '#262320', pointRadius: 2, borderWidth: 1.5, borderDash: [5, 3] },
+          ]
+        },
+        options: boxChartOptions(unit.unit + '元/坪', fmtPriceAuto, axisMax, (v) => fmtByUnit(v, unit.divisor), means)
+      });
+    }
+
+    function renderTotalChart(rows) {
+      if (!totalCanvas.value) return;
+      if (totalChart) totalChart.destroy();
+      const boxData = boxDatasetData(rows);
+      const axisMax = suggestedAxisMax(boxData);
+      const unit = pickPriceUnit(axisMax);
+      const means = meansFromBoxData(boxData);
+      const counts = rows.map(r => Number(r.cnt) || 0);
+      totalChart = new Chart(totalCanvas.value.getContext('2d'), {
+        data: {
+          labels: rows.map(r => yearLabel(r.yr)),
+          datasets: [
+            { type: 'boxplot', label: '總價', data: boxData, yAxisID: 'y',
+              backgroundColor: '#3C625533', borderColor: '#3C6255', borderWidth: 1.5,
+              outlierColor: '#3C6255', itemRadius: 0, medianColor: '#3C6255' },
+            { type: 'line', label: '筆數', data: counts, yAxisID: 'y1',
+              borderColor: '#262320', backgroundColor: '#262320', pointRadius: 2, borderWidth: 1.5, borderDash: [5, 3] },
+          ]
+        },
+        options: boxChartOptions(unit.unit + '元', fmtAuto, axisMax, (v) => fmtByUnit(v, unit.divisor), means)
+      });
+    }
+
+    function renderBuildingAreaChart(rows) {
+      if (!buildingAreaCanvas.value) return;
+      if (buildingAreaChart) buildingAreaChart.destroy();
+      const boxData = boxDatasetData(rows);
+      const means = meansFromBoxData(boxData);
+      const counts = rows.map(r => Number(r.cnt) || 0);
+      buildingAreaChart = new Chart(buildingAreaCanvas.value.getContext('2d'), {
+        data: {
+          labels: rows.map(r => yearLabel(r.yr)),
+          datasets: [
+            { type: 'boxplot', label: '建物坪數', data: boxData, yAxisID: 'y',
+              backgroundColor: '#AD8A3F33', borderColor: '#AD8A3F', borderWidth: 1.5,
+              outlierColor: '#AD8A3F', itemRadius: 0, medianColor: '#AD8A3F' },
+            { type: 'line', label: '筆數', data: counts, yAxisID: 'y1',
+              borderColor: '#262320', backgroundColor: '#262320', pointRadius: 2, borderWidth: 1.5, borderDash: [5, 3] },
+          ]
+        },
+        options: boxChartOptions('坪', fmtNum, suggestedAxisMax(boxData), null, means)
+      });
+    }
+
+    function renderLandAreaChart(rows) {
+      if (!landAreaCanvas.value) return;
+      if (landAreaChart) landAreaChart.destroy();
+      const boxData = boxDatasetData(rows);
+      const means = meansFromBoxData(boxData);
+      const counts = rows.map(r => Number(r.cnt) || 0);
+      landAreaChart = new Chart(landAreaCanvas.value.getContext('2d'), {
+        data: {
+          labels: rows.map(r => yearLabel(r.yr)),
+          datasets: [
+            { type: 'boxplot', label: '土地坪數', data: boxData, yAxisID: 'y',
+              backgroundColor: '#4A6FA533', borderColor: '#4A6FA5', borderWidth: 1.5,
+              outlierColor: '#4A6FA5', itemRadius: 0, medianColor: '#4A6FA5' },
+            { type: 'line', label: '筆數', data: counts, yAxisID: 'y1',
+              borderColor: '#262320', backgroundColor: '#262320', pointRadius: 2, borderWidth: 1.5, borderDash: [5, 3] },
+          ]
+        },
+        options: boxChartOptions('坪', fmtNum, suggestedAxisMax(boxData), null, means)
+      });
+    }
+
+    function renderTypeChart(rows) {
+      if (!typeCanvas.value) return;
+      if (typeChart) typeChart.destroy();
+      const avgUnits = rows.map(r => r.avg_unit ? Math.round(Number(r.avg_unit)) : null);
+      const maxAvgUnit = avgUnits.reduce((m, v) => (v !== null && v > m ? v : m), 0);
+      const unit = pickPriceUnit(maxAvgUnit);
+      typeChart = new Chart(typeCanvas.value.getContext('2d'), {
+        data: {
+          labels: rows.map(r => r.t),
+          datasets: [
+            { type: 'bar', label: filters.metric + '均價', data: avgUnits,
+              backgroundColor: '#AD8A3F99', borderColor: '#AD8A3F', yAxisID: 'y' },
+            { type: 'line', label: '筆數', data: rows.map(r => Number(r.cnt)), yAxisID: 'y1',
+              borderColor: '#262320', backgroundColor: '#262320', pointRadius: 3 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'nearest', axis: 'x', intersect: false },
+          scales: {
+            y: { position: 'left', title: { display: true, text: unit.unit + '元/坪' }, ticks: { callback: (v) => fmtByUnit(v, unit.divisor) } },
+            y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '筆數' } },
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: {
+              titleFont: { size: 13 }, bodyFont: { size: 13 }, padding: 10,
+              callbacks: {
+                label(ctx) {
+                  if (ctx.dataset.yAxisID === 'y') return `${ctx.dataset.label}：${fmtPriceAuto(ctx.parsed.y)}`;
+                  return `${ctx.dataset.label}：${fmtInt(ctx.parsed.y)}`;
+                }
+              }
+            }
+          },
+        }
+      });
+    }
+
+    // 參考「建物型態分布」做的「土地位置」版本：土地位置原始字串通常很長很雜，
+    // 圖上只取交易筆數最多的前 15 個熱門地點（SQL 已經 LIMIT 15），X 軸文字太長時軸上截斷、tooltip 標題仍顯示完整地點名稱
+    function renderLocationChart(rows) {
+      if (!locationCanvas.value) return;
+      if (locationChart) locationChart.destroy();
+      const avgUnits = rows.map(r => r.avg_unit ? Math.round(Number(r.avg_unit)) : null);
+      const maxAvgUnit = avgUnits.reduce((m, v) => (v !== null && v > m ? v : m), 0);
+      const unit = pickPriceUnit(maxAvgUnit);
+      locationChart = new Chart(locationCanvas.value.getContext('2d'), {
+        data: {
+          labels: rows.map(r => r.t),
+          datasets: [
+            { type: 'bar', label: filters.metric + '均價', data: avgUnits,
+              backgroundColor: '#4A6FA599', borderColor: '#4A6FA5', yAxisID: 'y' },
+            { type: 'line', label: '筆數', data: rows.map(r => Number(r.cnt)), yAxisID: 'y1',
+              borderColor: '#262320', backgroundColor: '#262320', pointRadius: 3 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'nearest', axis: 'x', intersect: false },
+          scales: {
+            x: {
+              ticks: {
+                autoSkip: false, minRotation: 30, maxRotation: 60,
+                callback(value) {
+                  const label = this.getLabelForValue(value);
+                  return label && label.length > 10 ? label.slice(0, 10) + '…' : label;
+                }
+              }
+            },
+            y: { position: 'left', title: { display: true, text: unit.unit + '元/坪' }, ticks: { callback: (v) => fmtByUnit(v, unit.divisor) } },
+            y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '筆數' } },
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: {
+              titleFont: { size: 13 }, bodyFont: { size: 13 }, padding: 10,
+              callbacks: {
+                label(ctx) {
+                  if (ctx.dataset.yAxisID === 'y') return `${ctx.dataset.label}：${fmtPriceAuto(ctx.parsed.y)}`;
+                  return `${ctx.dataset.label}：${fmtInt(ctx.parsed.y)}`;
+                }
+              }
+            }
+          },
+        }
+      });
+    }
+
+    // 地區熱力圖：因為沒有逐筆座標，用「縣市＋鄉鎮市區」彙總後的成交量／均價，畫在該區概略中心點上。
+    // 每次重畫都整個重建地圖（不做增量更新）：因為 v-if 勾選開關會直接把地圖的 <div> 從畫面上移除又生出新的，
+    // 舊的 Leaflet 地圖物件綁在已經不存在的 DOM 節點上沒辦法重複利用，乾脆整個銷毀重建，資料量小（以行政區為單位）效能上不是問題。
+    function renderHeatMap(rows) {
+      if (!heatMapEl.value || !window.L) return;
+      if (leafletMap) { leafletMap.remove(); leafletMap = null; heatLayer = null; }
+
+      leafletMap = L.map(heatMapEl.value, { zoomControl: true }).setView([24.99, 121.30], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(leafletMap);
+
+      let unmapped = 0;
+      let maxIntensity = 0;
+      const raw = []; // 先收集原始強度，等知道最大值後再正規化，避免其中一個熱點把其他地方都比下去
+      const fallbackSections = []; // 有行政區座標可退回、但地段還沒有精確座標的組合，用來列給你補座標
+      rows.forEach(r => {
+        const loc = sectionCentroid(r.county, r.district, r.section);
+        const cnt = Number(r.cnt) || 0;
+        if (!loc) { unmapped += cnt; return; }
+        if (!loc.precise) fallbackSections.push({ key: loc.key, cnt });
+        const intensity = heatMetric.value === 'price' ? (Number(r.avg_unit) || 0) : cnt;
+        if (intensity > maxIntensity) maxIntensity = intensity;
+        raw.push({ lat: loc.point[0], lng: loc.point[1], intensity });
+      });
+      heatUnmappedCount.value = unmapped;
+      // 依成交量排序，列出最需要優先補座標的地段（最多列 12 個，太多了列表沒意義）
+      heatSectionCandidates.value = fallbackSections.sort((a, b) => b.cnt - a.cnt).slice(0, 12);
+
+      // 直接拿原始成交量/均價當權重丟給 leaflet.heat 的問題：只有數值最高的那個區會吃滿整段色階（變彩虹狀大暈染），
+      // 其他區相對之下權重趨近 0，只會畫出一個接近透明的小點。用開根號壓縮數值差距，權重統一正規化到 0~1，
+      // 每個區至少會有一定的可視強度，才看得出來是「熱力圖」而不是散落的小點。
+      const points = raw.map(p => {
+        const w = maxIntensity > 0 ? Math.sqrt(p.intensity / maxIntensity) : 0;
+        return [p.lat, p.lng, Math.max(w, 0.15)];
+      });
+
+      if (points.length) {
+        heatLayer = L.heatLayer(points, { radius: 55, blur: 40, maxZoom: 14, max: 1, minOpacity: 0.45 }).addTo(leafletMap);
+        leafletMap.fitBounds(L.latLngBounds(points.map(p => [p[0], p[1]])).pad(0.3));
+      }
+
+      // 剛顯示出來的當下容器尺寸可能還沒算完，晚一點點再校正一次，不然地圖常常會顯示不滿版
+      setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 120);
+    }
+
+
+    async function exportCSV() {
+      const where = buildWhere();
+      const outName = 'export_' + Date.now() + '.csv';
+      await conn.query(`COPY (SELECT * FROM v_data WHERE ${where}) TO '${outName}' (HEADER, DELIMITER ',')`);
+      const buf = await db.copyFileToBuffer(outName);
+      const blob = new Blob(['\uFEFF', buf], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = '實登篩選結果.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function onFileUpload(e) {
+      const file = e.target.files[0];
+      if (file) loadUploadedFile(file);
+    }
+    function resetFilters() { afterLoad(); }
+
+    // 監看篩選條件變化，debounce 後重新查詢
+    watch(filters, () => { if (dataLoaded.value) scheduleRefresh(); }, { deep: true });
+    // 交易年／交易年度顯示模式切換時，直接用上次查到的資料重畫圖表座標軸，不必重新查詢
+    watch(yearMode, () => {
+      // 切換交易年／交易年度時，篩選欄位的年份範圍改用新模式的資料範圍，畫面上會直接看到數字跟著換，
+      // 不然兩個模式剛好都沒動篩選滑桿的話，會誤以為切換沒有反應
+      filters.yearMin = curYearMin.value;
+      filters.yearMax = curYearMax.value;
+      if (dataLoaded.value) scheduleRefresh();
+    });
+    // 圖表顯示勾選框切換時：等 v-if 把 canvas 畫回 DOM 之後，再用上次查到的資料補畫
+    watch(chartVisibility, async () => {
+      await nextTick();
+      renderVisibleCharts();
+    }, { deep: true });
+    // 熱力圖強度依據（成交量／均價）切換時，用上次查到的資料重畫就好，不用重新查詢
+    watch(heatMetric, () => { if (chartVisibility.heatmap) renderHeatMap(lastHeatRows); });
+
+    onMounted(async () => {
+      // topbar 高度會因為換行（例如出現「本機快取」提示、視窗變窄）而改變，用 ResizeObserver 即時同步給 CSS，
+      // 讓側欄的 sticky 定位跟高度計算永遠對齊 topbar 實際高度，不會疊在一起或留白
+      if (topbarEl.value && window.ResizeObserver) {
+        const ro = new ResizeObserver(entries => {
+          for (const entry of entries) {
+            document.documentElement.style.setProperty('--topbar-h', Math.ceil(entry.contentRect.height) + 'px');
+          }
+        });
+        ro.observe(topbarEl.value);
+      }
+
+      // 視窗大小改變時，Leaflet 地圖的容器尺寸要重新校正一次，不然畫面會沒有跟著撐滿
+      window.addEventListener('resize', () => { if (leafletMap) leafletMap.invalidateSize(); });
+
+      await loadZoneRules();
+      const cached = await loadDatasetFromCache();
+      if (cached) { await loadFromCacheRecord(cached); return; }
+      if (DEFAULT_DATASET_URL) {
+        const ok = await loadFromServerDefault(DEFAULT_DATASET_URL);
+        if (ok) return;
+      }
+      statusText.value = '尚未載入資料，請上傳 Parquet 檔案';
+    });
+
+    return {
+      loading, dataLoaded, statusText, statusClass, cachedFileName, cachedSavedAt, fmtCacheTime, clearCache,
+      filterOptions, filters, summary, excludedCount, tableRows, page, pageSize, totalPages,
+      trendCanvas, typeCanvas, totalCanvas, buildingAreaCanvas, landAreaCanvas, locationCanvas, heatMapEl, heatMetric, heatUnmappedCount, heatSectionCandidates, heatSectionSnippet, sectionSnippetCopied, copySectionSnippet, topbarEl,
+      fmtInt, fmtWan, fmtNum, fmtAuto, fmtDate, fmtPriceAuto, fmtPriceShort, yearMode, curYearMin, curYearMax, chartVisibility, floorCol, totalFloorCol, isQuickTarget, setTargets, onMetricChange,
+      onFileUpload, resetFilters, exportCSV, loadTablePage,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
