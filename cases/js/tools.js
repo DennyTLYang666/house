@@ -16,7 +16,23 @@
   // ══════════════════════════════
   //  預設資料（第一次使用時寫入）
   // ══════════════════════════════
+
   const DEFAULT_DATA = {
+    都市計畫土地計畫: [
+      { name: '國土規劃地理資訊平台', url: 'https://luz.nlma.gov.tw/m/web' },
+    ],
+    國土計畫分區: [
+      { name: '內政部國土管理署-國土功能分區資訊系統', url: 'https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
+      { name: '全國土地使用分區資料查詢系統', url: 'https://luz.nlma.gov.tw/web/' },
+      { name: '土地使用分區查詢', url: 'https://pip.moi.gov.tw/Publicize/Info/Z2060' },
+      { name: '桃園市政府土地使用分區線上查詢', url: 'https://landuse.tycg.gov.tw/Sys/QueryLandUse/QueryLandUse.aspx' },
+    ],
+    國土計畫: [
+      { name: '查詢各縣市上位計畫', url: 'https://www.nlma.gov.tw/ch/titlelist/areash/5128' },
+      { name: '政府電子採購網', url: 'https://web.pcc.gov.tw/pis/' },
+      { name: '環境部環坪書件查詢系統', url: 'https://eiadoc.moenv.gov.tw/' },
+      { name: '土壤及地下水污染整治網-買之前做最終確認', url: 'https://sgw.moenv.gov.tw/public' },
+    ],
     地籍: [
       { name: '國土測繪地圖', url: 'https://maps.nlsc.gov.tw/T09/mobilemap.action' },
       { name: '地籍圖資查詢', url: 'https://easymap.land.moi.gov.tw/' },
@@ -30,11 +46,8 @@
     ],
     都市計畫: [
       { name: '桃園市政府都市計畫', url: 'https://urplanning.tycg.gov.tw/gisMap/Map.aspx' },
-      { name: '內政部國土管理署-國土功能分區資訊系統', url: 'https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     ],
     使用分區: [
-      { name: '全國土地使用分區資料查詢系統', url: 'https://luz.nlma.gov.tw/web/' },
-      { name: '桃園市政府土地使用分區線上查詢', url: 'https://landuse.tycg.gov.tw/Sys/QueryLandUse/QueryLandUse.aspx' },
     ],
     知識: [
       { name: '國土功能分區懶人包', url: 'https://landplan.nantou.gov.tw/NTOU/upload/news/20220223145139_%E5%9C%8B%E5%9C%9F%E5%8A%9F%E8%83%BD%E5%88%86%E5%8D%80%E6%87%B6%E4%BA%BA%E5%8C%85.pdf' },
