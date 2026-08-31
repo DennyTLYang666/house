@@ -20,6 +20,7 @@
   const DEFAULT_DATA = {
     都市計畫土地計畫: [
       { name: '國土規劃地理資訊平台', url: 'https://luz.nlma.gov.tw/m/web' },
+      { name: '國土規劃地理資訊平台-PC', url: 'https://maps.nlsc.gov.tw/T09/mapshow.action?In_type=web' },
     ],
     國土計畫分區: [
       { name: '內政部國土管理署-國土功能分區資訊系統', url: 'https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
